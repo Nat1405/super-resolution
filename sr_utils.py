@@ -1,0 +1,187 @@
+import common_utils as common
+import state
+import astropy.visualization
+import numpy as np
+import scipy.stats as st
+import torch
+import torch.nn as nn
+import torchvision
+import torchvision.transforms as transforms
+import torchvision.transforms.functional as TF
+import sys
+
+import numpy as np
+from PIL import Image
+import PIL
+import numpy as np
+
+import matplotlib.pyplot as plt
+import argparse
+import configparser
+import astropy.io.fits as fits
+
+import state
+
+def gkern(kernlen=21, nsig=3):
+    """Returns a 2D Gaussian kernel."""
+
+    x = np.linspace(-nsig, nsig, kernlen+1)
+    kern1d = np.diff(st.norm.cdf(x))
+    kern2d = np.outer(kern1d, kern1d)
+    return kern2d/kern2d.sum()
+
+
+def blurImage(img):
+    # Img: tensor of shape (X, Y)
+    config = common.get_config()
+    KERNEL_SIZE = config.getint('DEFAULT', 'blur_size')
+
+    if config['DEFAULT']['blur'] == 'box':
+        kernel = (1/(KERNEL_SIZE**2))*np.ones((1,1,KERNEL_SIZE,KERNEL_SIZE))
+    elif config['DEFAULT']['blur'] == 'gauss':
+        kernel = np.expand_dims(np.expand_dims(gkern(KERNEL_SIZE), axis=0), axis=0)
+    elif config['DEFAULT']['blur'] == 'none':
+        kernel = np.ones((1,1,KERNEL_SIZE,KERNEL_SIZE))
+    else:    
+        print("Unrecognized blur")
+        return
+
+    m = nn.Conv2d(1, 1, KERNEL_SIZE, stride=1, padding=(int((KERNEL_SIZE-1)/2),int((KERNEL_SIZE-1)/2)), padding_mode='reflect')
+    kernel = torch.Tensor(kernel)
+    kernel = torch.nn.Parameter( kernel ) # calling this turns tensor into "weight" parameter
+    m.weight = kernel
+
+    with torch.no_grad():
+        output = m(TF.to_tensor(img).unsqueeze(0))
+    Interval = astropy.visualization.MinMaxInterval()
+    return Image.fromarray(Interval(output.squeeze(0).numpy()[0]), mode='F')
+
+
+
+
+def save_results():
+    state.net.eval()
+    # Save output data as fits files.
+
+    for j in range(len(state.imgs)):
+        hdu = fits.PrimaryHDU(np.array(state.imgs[j]['LR_pil']))
+        hdu.writeto('output/LR_np_{}.fits'.format(j))
+
+        hdu = fits.PrimaryHDU(np.array(state.imgs[j]['HR_pil']))
+        hdu.writeto('output/HR_np_{}.fits'.format(j))
+
+        with torch.no_grad():
+            data = state.net(state.imgs[j]['net_input']).cpu()
+        hdu = fits.PrimaryHDU(data)
+        hdu.writeto('output/network_output_{}.fits'.format(j))
+
+
+
+
+def makeInterpolation(imgs):
+    if len(imgs) < 2:
+        raise ValueError("Can't interpolate less than two images.")
+
+    first_noise = imgs[0]['net_input']
+    last_noise = imgs[-1]['net_input']
+
+    n = len(imgs)
+
+    delta = (last_noise - first_noise) / ( n - 1 )
+
+    for j in range(len(imgs)):
+        imgs[j]['net_input'] = first_noise + (j*delta)
+
+
+def put_in_center(img_np, target_size):
+    img_out = np.zeros([3, target_size[0], target_size[1]])
+    
+    bbox = [
+            int((target_size[0] - img_np.shape[1]) / 2),
+            int((target_size[1] - img_np.shape[2]) / 2),
+            int((target_size[0] + img_np.shape[1]) / 2),
+            int((target_size[1] + img_np.shape[2]) / 2),
+    ]
+    
+    img_out[:, bbox[0]:bbox[2], bbox[1]:bbox[3]] = img_np
+    
+    return img_out
+
+
+def load_LR_HR_imgs_sr(fname):
+    '''Loads an image, resizes it, center crops and downscales.
+
+    Args: 
+        fname: path to the image
+        imsize: (width, height)
+        crop_coordinates: (left, upper)
+    '''
+
+    config = common.get_config()
+
+    # Load fits file to [0,1] normalized numpy array
+    img_orig_np = common.get_image(fname)
+    orig_pil = Image.fromarray(img_orig_np)
+    orig_pil_blurred = blurImage(orig_pil)
+
+    HR_pil = crop(orig_pil)
+    HR_pil_blurred = crop(orig_pil_blurred)
+
+    # Create low resolution
+    LR_pil = downsample(HR_pil)
+    LR_pil_blurred = downsample(HR_pil_blurred)
+
+    print('HR and LR resolutions: %s, %s' % (str(HR_pil.size), str(LR_pil.size)))
+
+    input_depth = config.getint('DEFAULT', 'input_depth')
+    imsize = config.getint('DEFAULT', 'imsize')
+    net_input = common.get_noise(input_depth, 'noise', imsize).type(state.dtype).detach()
+
+    out =   {
+            'orig_pil': orig_pil,
+            'orig_pil_blurred': orig_pil_blurred,
+            'HR_pil': HR_pil,
+            'HR_pil_blurred': HR_pil_blurred,
+            'LR_pil': LR_pil,
+            'LR_pil_blurred': LR_pil_blurred,
+            'net_input': net_input
+
+        }
+
+    return out
+
+
+def crop(img_orig_pil):
+    config = common.get_config()
+    crop_coordinates = (config.getint('DEFAULT', 'crop_x'), config.getint('DEFAULT', 'crop_y'))
+    imsize = (config.getint('DEFAULT', 'imsize'), config.getint('DEFAULT', 'imsize'))
+    factor = 4
+    # Crop the image
+    img_HR_pil = img_orig_pil.crop(
+                    (crop_coordinates[0], 
+                    crop_coordinates[1]-imsize[1],
+                    crop_coordinates[0]+imsize[0],
+                    crop_coordinates[1]))
+    return img_HR_pil
+
+def downsample(img_HR_pil):
+    config = common.get_config()
+    crop_coordinates = (config.getint('DEFAULT', 'crop_x'), config.getint('DEFAULT', 'crop_y'))
+    imsize = (config.getint('DEFAULT', 'imsize'), config.getint('DEFAULT', 'imsize'))
+    factor = config.getint('DEFAULT', 'factor')
+    imsize_lr = (imsize[0] // factor, imsize[1] // factor)
+    img_LR_pil = img_HR_pil.resize(imsize_lr, Image.BICUBIC)
+    Interval = astropy.visualization.MinMaxInterval()
+    return Image.fromarray(Interval(img_LR_pil), mode='F')
+
+def tv_loss(x, beta = 0.5):
+    '''Calculates TV loss for an image `x`.
+        
+    Args:
+        x: image, torch.Variable of torch.Tensor
+        beta: See https://arxiv.org/abs/1412.0035 (fig. 2) to see effect of `beta` 
+    '''
+    dh = torch.pow(x[:,:,:,1:] - x[:,:,:,:-1], 2)
+    dw = torch.pow(x[:,:,1:,:] - x[:,:,:-1,:], 2)
+    
+    return torch.sum(torch.pow(dh[:, :, :-1] + dw[:, :, :, :-1], beta))
