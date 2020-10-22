@@ -89,10 +89,10 @@ def build_closure(writer, dtype):
 
     def get_images(before_HR, after_HR, before_LR, after_LR):
         HR_grid = torchvision.utils.make_grid([
-            before_HR, after_HR
+            torch.clamp(before_HR, 0, 1), torch.clamp(after_HR, 0, 1)
             ], 2)
         LR_grid = torchvision.utils.make_grid([
-            before_LR, after_LR
+            torch.clamp(before_LR, 0, 1), torch.clamp(after_LR, 0, 1)
             ], 2)
         
         return HR_grid, LR_grid
