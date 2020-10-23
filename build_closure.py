@@ -102,11 +102,11 @@ def build_closure(writer, dtype):
         # Train with a different input/output pair at each iteration.
         index = state.i % len(state.imgs)
         net_input = state.imgs[index]['net_input']
-        ground_truth_LR = TF.to_tensor(state.imgs[index]['LR_pil']).type(state.dtype)
-        ground_truth_HR = TF.to_tensor(state.imgs[index]['HR_pil']).type(state.dtype)
-        bicubic_HR = TF.to_tensor(state.imgs[index]['HR_bicubic']).type(state.dtype)
-        blurred_HR = TF.to_tensor(state.imgs[index]['HR_pil_blurred']).type(state.dtype)
-        blurred_LR = TF.to_tensor(state.imgs[index]['LR_pil_blurred']).type(state.dtype)
+        ground_truth_LR = TF.to_tensor(state.imgs[index]['LR_pil']).type(state.dtype).detach().cpu()
+        ground_truth_HR = TF.to_tensor(state.imgs[index]['HR_pil']).type(state.dtype).detach().cpu()
+        bicubic_HR = TF.to_tensor(state.imgs[index]['HR_bicubic']).type(state.dtype).detach().cpu()
+        blurred_HR = TF.to_tensor(state.imgs[index]['HR_pil_blurred']).type(state.dtype).detach().cpu()
+        blurred_LR = TF.to_tensor(state.imgs[index]['LR_pil_blurred']).type(state.dtype).detach().cpu()
         
         # Feed through actual network
         out_HR = state.net(net_input)
