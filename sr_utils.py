@@ -36,8 +36,8 @@ def get_baselines(imgs):
         img['target_loss_bicubic'] = compare_HR(np.array(img['HR_pil']), np.array(img['HR_bicubic']))
         img['target_loss_bicubic_blurred'] = compare_HR(np.array(img['HR_pil']), np.array(img['HR_bicubic_blurred']))
 
-    print("PSNR: Bicubic {} / Blurred Bicubic {}".format(img['psnr_bicubic'], img['psnr_bicubic_blurred']))
-    print("Target Loss: Bicubic {} / Blurred Bicubic {}".format(img['target_loss_bicubic'], img['target_loss_bicubic_blurred']))
+    print("PSNR: Bicubic {} / Blurred Bicubic {}".format(imgs[0]['psnr_bicubic'], imgs[0]['psnr_bicubic_blurred']))
+    print("Target Loss: Bicubic {} / Blurred Bicubic {}".format(imgs[0]['target_loss_bicubic'], imgs[0]['target_loss_bicubic_blurred']))
 
 def gkern(kernlen=21, nsig=3):
     """Returns a 2D Gaussian kernel."""
