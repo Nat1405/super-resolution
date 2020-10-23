@@ -23,6 +23,11 @@ import astropy.io.fits as fits
 import state
 
 
+def get_background(noise_x, noise_y, region_size=200):
+    """Gets an estimate of the stddevation of the image."""
+    # For now, just do crude estimate from first image.
+    return np.std(np.array(state.imgs[0]['orig_pil']))    
+
 def compare_HR(ground_truth_HR, test_HR):
     # Calculates scalar loss between two np HR images.
     target_loss = compare_mse(ground_truth_HR, test_HR)

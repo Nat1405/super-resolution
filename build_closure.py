@@ -63,9 +63,19 @@ def build_closure(writer, dtype):
                 transforms.Lambda(lambda x: x.unsqueeze(0))
             ])
 
+    noise = config['DEFAULT']['added_noise'] != 'none'
+    if noise:
+        noise_x = config.getint('DEFAULT', 'noise_x')
+        noise_y = config.getint('DEFAULT', 'noise_y')
+        background = sr_utils.get_background(noise_x, noise_y)
+
     def get_loss(out_LR, ground_truth_LR, blurred_LR):
         """Calculates loss from the low-resolution output of the network.
         """
+        if noise:
+            with torch.no_grad():
+                out_LR += background*torch.randn(out_LR.size()).type(state.dtype)
+
         if blur:
             used_image = blurred_LR
         else:
