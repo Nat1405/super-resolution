@@ -13,8 +13,8 @@ import astropy.io.fits as fits
 import configparser
 
 import state
-import common_utils
-from sr_utils import *
+import common_utils as common
+import sr_utils
 from build_closure import build_closure
 from build_network import build_network
 
@@ -41,15 +41,20 @@ os.mkdir("output/inputs")
 writer = SummaryWriter(log_dir='output/runs/')
 
 # Read config file
-config = common_utils.get_config()
+config = common.get_config()
 
+# Load images. Crop to produce HR, downsample to produce LR,
+# create bicubic reference frames.
 state.imgs = []
 for im_path in glob.glob(config['DEFAULT']['path_to_images']):
-    state.imgs.append(load_LR_HR_imgs_sr(im_path))
+    state.imgs.append(sr_utils.load_LR_HR_imgs_sr(im_path))
+
+# Get baselines, such as psnr and target loss of bicubic.
+sr_utils.get_baselines(state.imgs)
 
 # Make input vectors linear interpolation from first to last
 if config.getboolean('DEFAULT', 'interpolate_input'):
-    makeInterpolation(state.imgs)
+    sr_utils.makeInterpolation(state.imgs)
 
 # Finished modifying inputs; now save them.
 for j in range(len(state.imgs)):
@@ -67,5 +72,5 @@ print(config['DEFAULT']['OPTIMIZER'])
 common.optimize(config['DEFAULT']['OPTIMIZER'], p, c, config.getfloat('DEFAULT', 'LR'), config.getint('DEFAULT', 'num_iter'))
 
 
-save_results()
+sr_utils.save_results()
 

@@ -1,10 +1,14 @@
-from sr_utils import *
+import sr_utils
 from skimage.measure import compare_psnr
 from skimage.measure import compare_mse
 import astropy.visualization
 import collections
+import torchvision
 from torchvision.models import vgg
 import torchvision.transforms as transforms
+import torchvision.transforms.functional as TF
+import torch
+import numpy as np
 
 from models.downsampler import Downsampler
 import state
@@ -33,7 +37,7 @@ class LossNetwork(torch.nn.Module):
 
 def build_closure(writer, dtype):
     # Read config file
-    config = configparser.ConfigParser()
+    config = common.configparser.ConfigParser()
     config.sections()
     config.read('config.cfg')
 
@@ -74,25 +78,15 @@ def build_closure(writer, dtype):
 
         return total_loss
 
-    def get_scalars(out_LR, out_HR, ground_truth_LR, ground_truth_HR):
-        """Inputs are all torch tensors.
-        Calculate:
-            Target Loss: mse(out_HR, ground_truth_HR)
-            PSNR_HR: psnr(out_HR, ground_truth_HR)
-            PSNR_LR: psnr(out_LR, ground_truth_LR)
-        """
-        psnr_LR = compare_psnr(np.array(ground_truth_LR), common.torch_to_np(out_LR.unsqueeze(0)))
-        psnr_HR = compare_psnr(np.array(ground_truth_HR), common.torch_to_np(out_HR.unsqueeze(0)))
-        target_loss = compare_mse(np.array(ground_truth_LR), common.torch_to_np(out_LR.unsqueeze(0)))
-
-        return target_loss, psnr_LR, psnr_HR
-
-    def get_images(before_HR, after_HR, before_LR, after_LR):
+    def get_images(before_HR, after_HR, bicubic_HR, before_LR, after_LR):
         HR_grid = torchvision.utils.make_grid([
-            torch.clamp(before_HR, 0, 1), torch.clamp(after_HR, 0, 1)
-            ], 2)
+            torch.clamp(torch.flip(before_HR, [1, 0]), 0, 1), 
+            torch.clamp(torch.flip(after_HR, [1, 0]), 0, 1),
+            torch.clamp(torch.flip(bicubic_HR, [1, 0]), 0, 1)
+            ], 3)
         LR_grid = torchvision.utils.make_grid([
-            torch.clamp(before_LR, 0, 1), torch.clamp(after_LR, 0, 1)
+            torch.clamp(torch.flip(before_LR, [1, 0]), 0, 1), 
+            torch.clamp(torch.flip(after_LR, [1, 0]), 0, 1)
             ], 2)
         
         return HR_grid, LR_grid
@@ -103,6 +97,7 @@ def build_closure(writer, dtype):
         net_input = state.imgs[index]['net_input']
         ground_truth_LR = TF.to_tensor(state.imgs[index]['LR_pil']).type(state.dtype)
         ground_truth_HR = TF.to_tensor(state.imgs[index]['HR_pil']).type(state.dtype)
+        bicubic_HR = TF.to_tensor(state.imgs[index]['HR_bicubic']).type(state.dtype)
         
         # Feed through actual network
         out_HR = state.net(net_input)
@@ -115,13 +110,13 @@ def build_closure(writer, dtype):
         total_loss = get_loss(out_LR, ground_truth_LR)
         total_loss.backward()
 
+        out_HR = out_HR.detach().cpu()
+        out_LR = out_LR.detach().cpu()
+
         if (state.i % plot_steps_low == 0) and (index == 0):
-            target_loss, psnr_LR, psnr_HR = get_scalars(
-                out_LR, 
-                out_HR,
-                ground_truth_LR,
-                ground_truth_HR
-                )
+            psnr_LR = compare_psnr(np.array(ground_truth_LR), common.torch_to_np(out_LR.unsqueeze(0)))
+            psnr_HR = compare_psnr(np.array(ground_truth_HR), common.torch_to_np(out_HR.unsqueeze(0)))
+            target_loss = sr_utils.compare_HR(np.array(ground_truth_HR), np.array(out_HR))
             
             print("{} {} {} {}".format(state.i, index, psnr_LR, psnr_HR))
 
@@ -139,9 +134,10 @@ def build_closure(writer, dtype):
             
             # Add images
             HR_grid, LR_grid = get_images(
-                ground_truth_HR.detach().clone(), 
-                out_HR, 
-                ground_truth_LR.detach().clone(), 
+                ground_truth_HR, 
+                out_HR,
+                bicubic_HR, 
+                ground_truth_LR, 
                 out_LR)
             writer.add_image('Network LR Output', LR_grid, state.i)
             writer.add_image('Network HR Output', HR_grid, state.i)

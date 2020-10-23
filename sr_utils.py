@@ -9,11 +9,11 @@ import torchvision
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 import sys
+from skimage.measure import compare_psnr
+from skimage.measure import compare_mse
 
-import numpy as np
 from PIL import Image
 import PIL
-import numpy as np
 
 import matplotlib.pyplot as plt
 import argparse
@@ -21,6 +21,23 @@ import configparser
 import astropy.io.fits as fits
 
 import state
+
+
+def compare_HR(ground_truth_HR, test_HR):
+    # Calculates scalar loss between two np HR images.
+    target_loss = compare_mse(ground_truth_HR, test_HR)
+    return target_loss
+
+def get_baselines(imgs):
+    """Add psnr and target loss measures to imgs."""
+    for img in imgs:
+        img['psnr_bicubic'] = compare_psnr(np.array(img['HR_pil']), np.array(img['HR_bicubic']))
+        img['psnr_bicubic_blurred'] = compare_psnr(np.array(img['HR_pil']), np.array(img['HR_bicubic_blurred']))
+        img['target_loss_bicubic'] = compare_HR(np.array(img['HR_pil']), np.array(img['HR_bicubic']))
+        img['target_loss_bicubic_blurred'] = compare_HR(np.array(img['HR_pil']), np.array(img['HR_bicubic_blurred']))
+
+    print("PSNR: Bicubic {} / Blurred Bicubic {}".format(img['psnr_bicubic'], img['psnr_bicubic_blurred']))
+    print("Target Loss: Bicubic {} / Blurred Bicubic {}".format(img['target_loss_bicubic'], img['target_loss_bicubic_blurred']))
 
 def gkern(kernlen=21, nsig=3):
     """Returns a 2D Gaussian kernel."""
@@ -137,6 +154,10 @@ def load_LR_HR_imgs_sr(fname):
     imsize = config.getint('DEFAULT', 'imsize')
     net_input = common.get_noise(input_depth, 'noise', imsize).type(state.dtype).detach()
 
+    # Create bicubic upsampled versions of LR images for reference
+    HR_bicubic = LR_pil.resize(HR_pil.size, Image.BICUBIC)
+    HR_bicubic_blurred = LR_pil_blurred.resize(HR_pil_blurred.size, Image.BICUBIC)
+
     out =   {
             'orig_pil': orig_pil,
             'orig_pil_blurred': orig_pil_blurred,
@@ -144,8 +165,9 @@ def load_LR_HR_imgs_sr(fname):
             'HR_pil_blurred': HR_pil_blurred,
             'LR_pil': LR_pil,
             'LR_pil_blurred': LR_pil_blurred,
-            'net_input': net_input
-
+            'net_input': net_input,
+            'HR_bicubic': HR_bicubic,
+            'HR_bicubic_blurred': HR_bicubic_blurred
         }
 
     return out
