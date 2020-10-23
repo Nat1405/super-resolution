@@ -58,7 +58,8 @@ def blurImage(img):
     elif config['DEFAULT']['blur'] == 'gauss':
         kernel = np.expand_dims(np.expand_dims(gkern(KERNEL_SIZE), axis=0), axis=0)
     elif config['DEFAULT']['blur'] == 'none':
-        kernel = np.ones((1,1,KERNEL_SIZE,KERNEL_SIZE))
+        Interval = astropy.visualization.MinMaxInterval()
+        return Image.fromarray(Interval(np.array(img)), mode='F')
     else:    
         print("Unrecognized blur")
         return

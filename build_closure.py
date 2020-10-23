@@ -63,31 +63,38 @@ def build_closure(writer, dtype):
                 transforms.Lambda(lambda x: x.unsqueeze(0))
             ])
 
-    def get_loss(out_LR, ground_truth_LR):
+    def get_loss(out_LR, ground_truth_LR, blurred_LR):
         """Calculates loss from the low-resolution output of the network.
         """
+        if blur:
+            used_image = blurred_LR
+        else:
+            used_image = ground_truth_LR
+
         if loss_network:
             out_LR = out_LR.repeat(3, 1, 1)
-            ground_truth_LR = ground_truth_LR.repeat(3,1,1)
+            used_image = used_image.repeat(3,1,1)
             total_loss = mse(
                     loss_network(grey_to_normal_rgb(out_LR)).relu3_3,
-                    loss_network(grey_to_normal_rgb(ground_truth_LR)).relu3_3
+                    loss_network(grey_to_normal_rgb(used_image)).relu3_3
                 )
         else:
-            total_loss = mse(out_LR, ground_truth_LR)
+            total_loss = mse(out_LR, used_image)
 
         return total_loss
 
-    def get_images(before_HR, after_HR, bicubic_HR, before_LR, after_LR):
+    def get_images(before_HR, after_HR, bicubic_HR, blurred_HR, before_LR, after_LR, blurred_LR):
         HR_grid = torchvision.utils.make_grid([
+            torch.clamp(torch.flip(blurred_HR, [1,0]), 0, 1),
             torch.clamp(torch.flip(before_HR, [1, 0]), 0, 1), 
             torch.clamp(torch.flip(after_HR, [1, 0]), 0, 1),
             torch.clamp(torch.flip(bicubic_HR, [1, 0]), 0, 1)
-            ], 3)
+            ], 4)
         LR_grid = torchvision.utils.make_grid([
+            torch.clamp(torch.flip(blurred_LR, [1,0]), 0, 1),
             torch.clamp(torch.flip(before_LR, [1, 0]), 0, 1), 
             torch.clamp(torch.flip(after_LR, [1, 0]), 0, 1)
-            ], 2)
+            ], 3)
         
         return HR_grid, LR_grid
 
@@ -98,6 +105,8 @@ def build_closure(writer, dtype):
         ground_truth_LR = TF.to_tensor(state.imgs[index]['LR_pil']).type(state.dtype)
         ground_truth_HR = TF.to_tensor(state.imgs[index]['HR_pil']).type(state.dtype)
         bicubic_HR = TF.to_tensor(state.imgs[index]['HR_bicubic']).type(state.dtype)
+        blurred_HR = TF.to_tensor(state.imgs[index]['HR_pil_blurred']).type(state.dtype)
+        blurred_LR = TF.to_tensor(state.imgs[index]['LR_pil_blurred']).type(state.dtype)
         
         # Feed through actual network
         out_HR = state.net(net_input)
@@ -107,7 +116,7 @@ def build_closure(writer, dtype):
         out_LR = out_LR.squeeze(0)
 
         # Get loss and train
-        total_loss = get_loss(out_LR, ground_truth_LR)
+        total_loss = get_loss(out_LR, ground_truth_LR, blurred_LR)
         total_loss.backward()
 
         out_HR = out_HR.detach().cpu()
@@ -136,9 +145,12 @@ def build_closure(writer, dtype):
             HR_grid, LR_grid = get_images(
                 ground_truth_HR, 
                 out_HR,
-                bicubic_HR, 
+                bicubic_HR,
+                blurred_HR,
                 ground_truth_LR, 
-                out_LR)
+                out_LR,
+                blurred_LR
+                )
             writer.add_image('Network LR Output', LR_grid, state.i)
             writer.add_image('Network HR Output', HR_grid, state.i)
 
