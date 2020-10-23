@@ -72,9 +72,6 @@ def build_closure(writer, dtype):
     def get_loss(out_LR, ground_truth_LR, blurred_LR):
         """Calculates loss from the low-resolution output of the network.
         """
-        if noise:
-            with torch.no_grad():
-                out_LR += background*torch.randn(out_LR.size()).type(state.dtype)
 
         if blur:
             used_image = blurred_LR
@@ -120,6 +117,9 @@ def build_closure(writer, dtype):
         
         # Feed through actual network
         out_HR = state.net(net_input)
+        if noise:
+            with torch.no_grad():
+                out_HR = out_HR + background*torch.randn(out_HR.size()).type(state.dtype)
         out_LR = downsampler(out_HR)
 
         out_HR = out_HR.squeeze(0)
