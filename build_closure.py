@@ -123,9 +123,9 @@ def build_closure(writer, dtype):
         out_LR = out_LR.detach().cpu()
 
         if (state.i % plot_steps_low == 0) and (index == 0):
-            psnr_LR = compare_psnr(np.array(ground_truth_LR), common.torch_to_np(out_LR.unsqueeze(0)))
-            psnr_HR = compare_psnr(np.array(ground_truth_HR), common.torch_to_np(out_HR.unsqueeze(0)))
-            target_loss = sr_utils.compare_HR(np.array(ground_truth_HR), np.array(out_HR))
+            psnr_LR = compare_psnr(common.torch_to_np(ground_truth_LR), common.torch_to_np(out_LR.unsqueeze(0)))
+            psnr_HR = compare_psnr(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR.unsqueeze(0)))
+            target_loss = sr_utils.compare_HR(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
             
             print("{} {} {} {}".format(state.i, index, psnr_LR, psnr_HR))
 
