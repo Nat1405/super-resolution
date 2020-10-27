@@ -94,6 +94,7 @@ def save_results():
         hdu.writeto('output/HR_np_{}.fits'.format(j))
 
         with torch.no_grad():
+            state.net.eval()
             data = state.net(state.imgs[j]['net_input']).cpu()
         hdu = fits.PrimaryHDU(data)
         hdu.writeto('output/network_output_{}.fits'.format(j))
