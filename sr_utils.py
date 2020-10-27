@@ -199,7 +199,7 @@ def downsample(img_HR_pil):
     imsize = (config.getint('DEFAULT', 'imsize'), config.getint('DEFAULT', 'imsize'))
     factor = config.getint('DEFAULT', 'factor')
     imsize_lr = (imsize[0] // factor, imsize[1] // factor)
-    img_LR_pil = img_HR_pil.resize(imsize_lr, Image.BICUBIC)
+    img_LR_pil = img_HR_pil.resize(imsize_lr, Image.ANTIALIAS)
     return img_LR_pil
 
 def tv_loss(x, beta = 0.5):
