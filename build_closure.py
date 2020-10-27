@@ -95,13 +95,15 @@ def build_closure(writer, dtype):
             torch.clamp(torch.flip(blurred_HR, [1,0]), 0, 1),
             torch.clamp(torch.flip(before_HR, [1, 0]), 0, 1), 
             torch.clamp(torch.flip(after_HR, [1, 0]), 0, 1),
-            torch.clamp(torch.flip(bicubic_HR, [1, 0]), 0, 1)
-            ], 4)
+            torch.clamp(torch.flip(bicubic_HR, [1, 0]), 0, 1),
+            torch.clamp(torch.flip(common.makeResidual(after_HR, before_HR), [1, 0]), 0, 1)
+            ], 5)
         LR_grid = torchvision.utils.make_grid([
             torch.clamp(torch.flip(blurred_LR, [1,0]), 0, 1),
             torch.clamp(torch.flip(before_LR, [1, 0]), 0, 1), 
-            torch.clamp(torch.flip(after_LR, [1, 0]), 0, 1)
-            ], 3)
+            torch.clamp(torch.flip(after_LR, [1, 0]), 0, 1),
+            torch.clamp(torch.flip(common.makeResidual(after_LR, before_LR), [1, 0]), 0, 1)
+            ], 4)
         
         return HR_grid, LR_grid
 

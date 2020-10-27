@@ -14,6 +14,21 @@ import configparser
 import astropy.io.fits as fits
 import astropy.visualization
 
+def makeResidual(after_HR, before_HR):
+    """Makes a residual image from two grayscale tensors by:
+        - Converting two tensors to numpy
+        - Subtracting them
+        - Normalizing to [0..1]
+        - Converting to tensors and returning them
+    """
+    after = torch_to_np(after_HR)
+    before = torch_to_np(before_HR)
+    result = after - before
+    Interval = astropy.visualization.MinMaxInterval()
+    result = torch.tensor(np.expand_dims(Interval(result), axis=0))
+    return result
+
+
 def get_config():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', help='config file')
