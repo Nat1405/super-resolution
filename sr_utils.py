@@ -200,8 +200,7 @@ def downsample(img_HR_pil):
     factor = config.getint('DEFAULT', 'factor')
     imsize_lr = (imsize[0] // factor, imsize[1] // factor)
     img_LR_pil = img_HR_pil.resize(imsize_lr, Image.BICUBIC)
-    Interval = astropy.visualization.MinMaxInterval()
-    return Image.fromarray(Interval(img_LR_pil), mode='F')
+    return img_LR_pil
 
 def tv_loss(x, beta = 0.5):
     '''Calculates TV loss for an image `x`.
