@@ -14,6 +14,8 @@ import configparser
 import astropy.io.fits as fits
 import astropy.visualization
 
+import state
+
 def makeResidual(after_HR, before_HR):
     """Makes a residual image from two grayscale tensors by:
         - Converting two tensors to numpy
@@ -25,7 +27,7 @@ def makeResidual(after_HR, before_HR):
     before = torch_to_np(before_HR)
     result = after - before
     Interval = astropy.visualization.MinMaxInterval()
-    result = torch.tensor(np.expand_dims(Interval(result), axis=0))
+    result = torch.tensor(np.expand_dims(Interval(result), axis=0)).type(state.dtype)
     return result
 
 
