@@ -99,12 +99,17 @@ def save_results():
         hdu.writeto('output/HR_bicubic_{}.fits'.format(j))
         common.saveFigure('output/HR_bicubic_{}.png'.format(j), hdu.data)
 
+        bicubic_residual = np.array(state.imgs[j]['HR_bicubic']) - np.array(state.imgs[j]['HR_pil'])
+        common.saveFigure('output/HR_bicubic_residual_{}.png'.format(j), bicubic_residual)
+
         with torch.no_grad():
             state.net.eval()
             data = state.net(state.imgs[j]['net_input']).cpu()
         hdu = fits.PrimaryHDU(data)
         hdu.writeto('output/network_output_{}.fits'.format(j))
         common.saveFigure('output/HR_Output_{}.png'.format(j), hdu.data[0,0])
+        output_residual = hdu.data[0,0] - np.array(state.imgs[j]['HR_pil'])
+        common.saveFigure('output/Output_Residual_{}.png'.format(j), output_residual)
 
 def printMetrics():
     print("Max PSNR HR: {}".format(max(state.history['psnr_HR'])))
