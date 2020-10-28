@@ -195,11 +195,12 @@ def crop(img_orig_pil):
 
 def downsample(img_HR_pil):
     config = common.get_config()
-    crop_coordinates = (config.getint('DEFAULT', 'crop_x'), config.getint('DEFAULT', 'crop_y'))
     imsize = (config.getint('DEFAULT', 'imsize'), config.getint('DEFAULT', 'imsize'))
     factor = config.getint('DEFAULT', 'factor')
     imsize_lr = (imsize[0] // factor, imsize[1] // factor)
-    img_LR_pil = img_HR_pil.resize(imsize_lr, Image.ANTIALIAS)
+    img_HR_pil_255 = Image.fromarray((np.array(img_HR_pil)*255).astype('uint8'))
+    img_LR_pil = img_HR_pil_255.resize(imsize_lr, Image.ANTIALIAS)
+    img_LR_pil = Image.fromarray((np.array(img_LR_pil)/255.).astype(np.float32))
     return img_LR_pil
 
 def tv_loss(x, beta = 0.5):
