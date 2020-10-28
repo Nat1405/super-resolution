@@ -89,17 +89,26 @@ def save_results():
     for j in range(len(state.imgs)):
         hdu = fits.PrimaryHDU(np.array(state.imgs[j]['LR_pil']))
         hdu.writeto('output/LR_np_{}.fits'.format(j))
+        common.saveFigure('output/LR_Ground_Truth_{}.png'.format(j), hdu.data)
 
         hdu = fits.PrimaryHDU(np.array(state.imgs[j]['HR_pil']))
         hdu.writeto('output/HR_np_{}.fits'.format(j))
+        common.saveFigure('output/HR_Ground_Truth_{}.png'.format(j), hdu.data)
+
+        hdu = fits.PrimaryHDU(np.array(state.imgs[j]['HR_bicubic']))
+        hdu.writeto('output/HR_bicubic_{}.fits'.format(j))
+        common.saveFigure('output/HR_bicubic_{}.png'.format(j), hdu.data)
 
         with torch.no_grad():
             state.net.eval()
             data = state.net(state.imgs[j]['net_input']).cpu()
         hdu = fits.PrimaryHDU(data)
         hdu.writeto('output/network_output_{}.fits'.format(j))
+        common.saveFigure('output/HR_Output_{}.png'.format(j), hdu.data[0,0])
 
-
+def printMetrics():
+    print("Max PSNR HR: {}".format(max(state.history['psnr_HR'])))
+    print("Max PSNR LR: {}".format(max(state.history['psnr_LR'])))
 
 
 def makeInterpolation(imgs):

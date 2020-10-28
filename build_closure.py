@@ -138,7 +138,10 @@ def build_closure(writer, dtype):
             psnr_LR = compare_psnr(common.torch_to_np(ground_truth_LR), common.torch_to_np(out_LR))
             psnr_HR = compare_psnr(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
             target_loss = sr_utils.compare_HR(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
-            
+            state.history['psnr_LR'].append(psnr_LR)
+            state.history['psnr_HR'].append(psnr_HR)
+            state.history['target_loss'].append(target_loss)
+
             print("{} {} {} {}".format(state.i, index, psnr_LR, psnr_HR))
 
             # TensorBoard History
@@ -167,8 +170,9 @@ def build_closure(writer, dtype):
             writer.add_image('Network HR Output', HR_grid, state.i)
 
             # Save a checkpoint
-            torch.save(state.net, "./output/checkpoints/checkpoint_{}.pt".format(state.i))
-        
+            #torch.save(state.net, "./output/checkpoints/checkpoint_{}.pt".format(state.i))
+            common.saveFigure("./output/checkpoints/checkpoint_{}.png".format(state.i), common.torch_to_np(out_HR))
+
         state.i += 1
         
         return total_loss

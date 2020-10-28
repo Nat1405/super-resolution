@@ -74,3 +74,5 @@ common.optimize(config['DEFAULT']['OPTIMIZER'], p, c, config.getfloat('DEFAULT',
 
 sr_utils.save_results()
 
+sr_utils.printMetrics()
+

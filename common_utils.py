@@ -1,13 +1,15 @@
 import torch
 import torch.nn as nn
 import torchvision
-import sys
+import sys, os
 
 import numpy as np
 from PIL import Image
 import PIL
 import numpy as np
 
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 import argparse
 import configparser
@@ -212,6 +214,40 @@ def torch_to_np(img_var):
     '''
     return img_var.detach().cpu().numpy()[0]
 
+def saveFigure(path, image):
+    config = get_config()
+    x1_low = config.getint("PLOTS", "x1_low")
+    x1_high = config.getint("PLOTS", "x1_high")
+    y1_low = config.getint("PLOTS", "y1_low")
+    y1_high = config.getint("PLOTS", "y1_high")
+    x2_low = config.getint("PLOTS", "x2_low")
+    x2_high = config.getint("PLOTS", "x2_high")
+    y2_low = config.getint("PLOTS", "y2_low")
+    y2_high = config.getint("PLOTS", "y2_high")
+
+    fig, ax = plt.subplots(figsize=[5, 7])
+    ax.imshow(image, origin="lower", cmap='gray')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    axins = ax.inset_axes([0.5, -0.5, 0.5, 0.5])
+    axins.imshow(image, origin="lower", cmap='gray')
+    axins.set_xlim(x1_low,x1_high)
+    axins.set_ylim(y1_low,y1_high)
+    axins.set_xticks([])
+    axins.set_yticks([])
+    ax.indicate_inset_zoom(axins, edgecolor='r')
+    
+    axins2 = ax.inset_axes([0.0, -0.5, 0.5, 0.5])
+    axins2.imshow(image, origin="lower", cmap='gray')
+    axins2.set_xlim(x2_low,x2_high)
+    axins2.set_ylim(y2_low,y2_high)
+    axins2.set_xticks([])
+    axins2.set_yticks([])
+    ax.indicate_inset_zoom(axins2, edgecolor='b')
+
+    fig.suptitle(path.split(os.path.sep)[-1])
+
+    plt.savefig(path)
 
 def optimize(optimizer_type, parameters, closure, LR, num_iter):
     """Runs optimization loop.
