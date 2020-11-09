@@ -207,15 +207,16 @@ def crop(img_orig_pil):
                     crop_coordinates[1]))
     return img_HR_pil
 
-def downsample(img_HR_pil):
+def downsample(img_HR_torch):
+    """Downsample an image using average pooling.
+        img_HR_torch: tensor image with shape (1,1,H,W), in [0..1].
+    """
     config = common.get_config()
-    imsize = (config.getint('DEFAULT', 'imsize'), config.getint('DEFAULT', 'imsize'))
     factor = config.getint('DEFAULT', 'factor')
-    imsize_lr = (imsize[0] // factor, imsize[1] // factor)
-    img_HR_pil_255 = Image.fromarray((np.array(img_HR_pil)*255).astype('uint8'))
-    img_LR_pil = img_HR_pil_255.resize(imsize_lr, Image.ANTIALIAS)
-    img_LR_pil = Image.fromarray((np.array(img_LR_pil)/255.).astype(np.float32))
-    return img_LR_pil
+
+    m = nn.AvgPool2d(factor)
+    img_LR_torch = m(img_HR_torch)
+    return img_LR_torch
 
 def tv_loss(x, beta = 0.5):
     '''Calculates TV loss for an image `x`.
