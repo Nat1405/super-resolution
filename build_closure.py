@@ -136,8 +136,11 @@ def build_closure(writer, dtype):
         total_loss = get_loss(out_LR, ground_truth_LR, blurred_LR)
         total_loss.backward()
 
-        out_HR = out_HR.detach()
-        out_LR = out_LR.detach()
+        out_HR = out_HR.detach().cpu()
+        out_LR = out_LR.detach().cpu()
+        ground_truth_LR = ground_truth_LR.cpu()
+        ground_truth_HR = ground_truth_HR.cpu()
+        bicubic_HR = bicubic_HR.cpu()
 
         if (state.i % plot_steps_low == 0) and (index == 0):
             psnr_LR = compare_psnr(common.torch_to_np(ground_truth_LR), common.torch_to_np(out_LR))

@@ -48,9 +48,9 @@ if config.getboolean('DEFAULT', 'interpolate_input'):
 for j in range(len(state.imgs)):
     torch.save(state.imgs[j]['net_input'], "output/inputs/input_{}.pt".format(j))
     sr_utils.make_baseline_figure(
-        state.imgs[j]['HR_torch'],
-        state.imgs[j]['HR_torch_bicubic'],
-        state.imgs[j]['LR_torch'],
+        state.imgs[j]['HR_torch'].cpu(),
+        state.imgs[j]['HR_torch_bicubic'].cpu(),
+        state.imgs[j]['LR_torch'].cpu(),
         'output/baseline_{}.png'.format(j)
     )
 
