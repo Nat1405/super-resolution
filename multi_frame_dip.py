@@ -38,19 +38,25 @@ for im_path in glob.glob(config['DEFAULT']['path_to_images']):
     state.imgs.append(sr_utils.load_LR_HR_imgs_sr(im_path))
 
 # Get baselines, such as psnr and target loss of bicubic.
-sr_utils.get_baselines(state.imgs)
+#sr_utils.get_baselines(state.imgs)
 
 # Make input vectors linear interpolation from first to last
 if config.getboolean('DEFAULT', 'interpolate_input'):
     sr_utils.makeInterpolation(state.imgs)
 
-# Finished modifying inputs; now save them.
+# Finished modifying inputs; now save them. Also make baseline figures.
 for j in range(len(state.imgs)):
     torch.save(state.imgs[j]['net_input'], "output/inputs/input_{}.pt".format(j))
+    sr_utils.make_baseline_figure(
+        state.imgs[j]['HR_torch'],
+        state.imgs[j]['HR_torch_bicubic'],
+        state.imgs[j]['LR_torch'],
+        'output/baseline_{}.png'.format(j)
+    )
 
-state.net = build_network(config.getint('DEFAULT', 'imsize'), dtype)
+state.net = build_network(config.getint('DEFAULT', 'imsize'), state.dtype)
 
-c = build_closure(writer, dtype)
+c = build_closure(writer, state.dtype)
 
 state.i = 0
 p = [x for x in state.net.parameters()]
@@ -60,7 +66,7 @@ print(config['DEFAULT']['OPTIMIZER'])
 common.optimize(config['DEFAULT']['OPTIMIZER'], p, c, config.getfloat('DEFAULT', 'LR'), config.getint('DEFAULT', 'num_iter'))
 
 
-sr_utils.save_results()
+#sr_utils.save_results()
 
-sr_utils.printMetrics()
+#sr_utils.printMetrics()
 

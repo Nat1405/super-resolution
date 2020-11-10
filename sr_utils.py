@@ -109,6 +109,7 @@ def make_baseline_figure(HR, bicubic_HR, LR, name):
         ax.set_yticks([])
     plt.subplots_adjust(wspace=0, hspace=0)
     plt.savefig(name)
+    plt.close()
 
 def make_progress_figure(HR, HR_bicubic, HR_out, LR, LR_out, HR_name, LR_name):
     """Make two figures; one tracks HR progress, one tracks LR progress.
@@ -148,6 +149,7 @@ def make_progress_figure(HR, HR_bicubic, HR_out, LR, LR_out, HR_name, LR_name):
         ax.set_yticks([])
     plt.subplots_adjust(wspace=0, hspace=0)
     plt.savefig(HR_name)
+    plt.close()
 
     # Make LR comparison figure
     ncols = 3
@@ -173,6 +175,7 @@ def make_progress_figure(HR, HR_bicubic, HR_out, LR, LR_out, HR_name, LR_name):
         ax.set_yticks([])
     plt.subplots_adjust(wspace=0, hspace=0)
     plt.savefig(LR_name)
+    plt.close()
 
 
 def save_results():

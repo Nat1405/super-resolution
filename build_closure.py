@@ -50,6 +50,7 @@ def build_closure(writer, dtype):
     downsampler = Downsampler(n_planes=1, factor=4, kernel_type='lanczos2', phase=0.5, preserve_size=True).type(dtype)
 
     loss_network = None
+    """
     if config.getboolean('DEFAULT', 'use_perceptual_loss'):
         vgg_model = vgg.vgg16(pretrained=True)
         if torch.cuda.is_available():
@@ -67,7 +68,7 @@ def build_closure(writer, dtype):
     if noise:
         noise_x = config.getint('DEFAULT', 'noise_x')
         noise_y = config.getint('DEFAULT', 'noise_y')
-        background = sr_utils.get_background(noise_x, noise_y)
+        background = sr_utils.get_background(noise_x, noise_y)"""
 
     def get_loss(out_LR, ground_truth_LR, blurred_LR):
         """Calculates loss from the low-resolution output of the network.
@@ -111,12 +112,16 @@ def build_closure(writer, dtype):
         # Train with a different input/output pair at each iteration.
         index = state.i % len(state.imgs)
         net_input = state.imgs[index]['net_input']
-        ground_truth_LR = TF.to_tensor(state.imgs[index]['LR_pil']).type(state.dtype)
-        ground_truth_HR = TF.to_tensor(state.imgs[index]['HR_pil']).type(state.dtype)
-        bicubic_HR = TF.to_tensor(state.imgs[index]['HR_bicubic']).type(state.dtype)
-        blurred_HR = TF.to_tensor(state.imgs[index]['HR_pil_blurred']).type(state.dtype)
-        blurred_LR = TF.to_tensor(state.imgs[index]['LR_pil_blurred']).type(state.dtype)
-        
+        ground_truth_LR = state.imgs[index]['LR_torch']
+        ground_truth_HR = state.imgs[index]['HR_torch']
+        bicubic_HR = state.imgs[index]['HR_torch_bicubic']
+        #blurred_HR = TF.to_tensor(state.imgs[index]['HR_pil_blurred']).type(state.dtype)
+        #blurred_LR = TF.to_tensor(state.imgs[index]['LR_pil_blurred']).type(state.dtype)
+        blurred_LR = ground_truth_LR
+        blurred_HR = ground_truth_HR
+        background = None
+        noise = None
+
         # Feed through actual network
         out_HR = state.net(net_input)
         if noise:
@@ -131,8 +136,8 @@ def build_closure(writer, dtype):
         total_loss = get_loss(out_LR, ground_truth_LR, blurred_LR)
         total_loss.backward()
 
-        out_HR = out_HR
-        out_LR = out_LR
+        out_HR = out_HR.detach()
+        out_LR = out_LR.detach()
 
         if (state.i % plot_steps_low == 0) and (index == 0):
             psnr_LR = compare_psnr(common.torch_to_np(ground_truth_LR), common.torch_to_np(out_LR))
@@ -171,8 +176,16 @@ def build_closure(writer, dtype):
 
             # Save a checkpoint
             #torch.save(state.net, "./output/checkpoints/checkpoint_{}.pt".format(state.i))
-            common.saveFigure("./output/checkpoints/checkpoint_{}.png".format(state.i), common.torch_to_np(out_HR))
-
+            #common.saveFigure("./output/checkpoints/checkpoint_{}.png".format(state.i), common.torch_to_np(out_HR))
+            sr_utils.make_progress_figure(
+                ground_truth_HR,
+                bicubic_HR,
+                out_HR,
+                ground_truth_LR,
+                out_LR,
+                'output/HR_update_{}.png'.format(state.i),
+                'output/LR_update_{}.png'.format(state.i)
+            )
         state.i += 1
         
         return total_loss
