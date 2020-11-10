@@ -143,9 +143,11 @@ def build_closure(writer, dtype):
             psnr_LR = compare_psnr(common.torch_to_np(ground_truth_LR), common.torch_to_np(out_LR))
             psnr_HR = compare_psnr(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
             target_loss = sr_utils.compare_HR(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
-            state.history['psnr_LR'].append(psnr_LR)
-            state.history['psnr_HR'].append(psnr_HR)
-            state.history['target_loss'].append(target_loss)
+            state.history_low['iteration'].append(state.i)
+            state.history_low['psnr_LR'].append(psnr_LR)
+            state.history_low['psnr_HR'].append(psnr_HR)
+            state.history_low['target_loss'].append(target_loss)
+            state.history_low['training_loss'].append(total_loss.item())
 
             print("{} {} {} {}".format(state.i, index, psnr_LR, psnr_HR))
 
@@ -157,6 +159,15 @@ def build_closure(writer, dtype):
 
         if (state.i % plot_steps_high == 0) and (index == 0):
             # Lower frequency capturing of large data
+            psnr_LR = compare_psnr(common.torch_to_np(ground_truth_LR), common.torch_to_np(out_LR))
+            psnr_HR = compare_psnr(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
+            target_loss = sr_utils.compare_HR(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
+            state.history_high['iteration'].append(state.i)
+            state.history_high['psnr_LR'].append(psnr_LR)
+            state.history_high['psnr_HR'].append(psnr_HR)
+            state.history_high['target_loss'].append(target_loss)
+            state.history_high['training_loss'].append(total_loss.item())
+
             # Save parameters
             for name, param in state.net.named_parameters():
                 writer.add_histogram('Parameter {}'.format(name), param.flatten(), state.i)

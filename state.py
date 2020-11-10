@@ -12,7 +12,15 @@ else:
 i = 0
 net = None
 imgs = None
-history = {
+history_low = {
+	"iteration":[],
+	"psnr_HR":[],
+	"psnr_LR":[],
+	"target_loss":[],
+	"training_loss":[]
+}
+history_high = {
+	"iteration":[],
 	"psnr_HR":[],
 	"psnr_LR":[],
 	"target_loss":[],

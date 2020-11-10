@@ -16,6 +16,9 @@ from PIL import Image
 import PIL
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Circle
+from matplotlib.offsetbox import (TextArea, DrawingArea, OffsetImage,
+                                  AnnotationBbox)
 import argparse
 import configparser
 import astropy.io.fits as fits
@@ -177,8 +180,86 @@ def make_progress_figure(HR, HR_bicubic, HR_out, LR, LR_out, HR_name, LR_name):
     plt.savefig(LR_name)
     plt.close()
 
+def make_summary_figure(
+    indices_low, indices_high,
+    psnr_HR_low, psnr_HR_high,
+    psnr_LR_low, psnr_LR_high,
+    target_loss_low, target_loss_high,
+    training_loss_low, training_loss_high,
+    experiment_name):
+    fig, axes = plt.subplots(4, 1, sharex=True, gridspec_kw={'hspace': 0}, figsize=(7,14))
+    fig.suptitle('{}'.format(experiment_name), fontsize=16)
+
+    axes[0].set_ylabel('PSNR HR_Out')
+    x_coord = indices_high[np.argmax(psnr_HR_high)]
+    y_coord = np.max(psnr_HR_high)
+    offsetbox = TextArea("Iteration: {}\nPSNR: {:.2f}".format(x_coord, y_coord), minimumdescent=False)
+    ab = AnnotationBbox(offsetbox, (x_coord, y_coord),
+                        xybox=(0.02, 0.92),
+                        xycoords='data',
+                        boxcoords=("axes fraction", "axes fraction"),
+                        box_alignment=(0., 0.5),
+                        arrowprops=dict(arrowstyle="->"))
+    axes[0].add_artist(ab)
+    axes[0].plot(indices_low, psnr_HR_low)
+    axes[0].scatter(indices_high, psnr_HR_high)
+    axes[0].plot(x_coord, y_coord, ".r") 
+
+
+    axes[1].set_ylabel('PSNR LR_Out')
+    x_coord = indices_high[np.argmax(psnr_LR_high)]
+    y_coord = np.max(psnr_LR_high)
+    offsetbox = TextArea("Iteration: {}\nPSNR: {:.2f}".format(x_coord, y_coord), minimumdescent=False)
+    ab = AnnotationBbox(offsetbox, (x_coord, y_coord),
+                        xybox=(0.02, 0.92),
+                        xycoords='data',
+                        boxcoords=("axes fraction", "axes fraction"),
+                        box_alignment=(0., 0.5),
+                        arrowprops=dict(arrowstyle="->"))
+    axes[1].add_artist(ab)
+    axes[1].plot(indices_low, psnr_LR_low)
+    axes[1].scatter(indices_high, psnr_LR_high)
+    axes[1].plot(x_coord, y_coord, ".r") 
+
+    axes[2].set_ylabel('Target Loss')
+    x_coord = indices_high[np.argmax(target_loss_high)]
+    y_coord = np.max(target_loss_high)
+    offsetbox = TextArea("Iteration: {}\nLoss: {:.2e}".format(x_coord, y_coord), minimumdescent=False)
+    ab = AnnotationBbox(offsetbox, (x_coord, y_coord),
+                        xybox=(0.02, 0.92),
+                        xycoords='data',
+                        boxcoords=("axes fraction", "axes fraction"),
+                        box_alignment=(0., 0.5),
+                        arrowprops=dict(arrowstyle="->"))
+    axes[2].add_artist(ab)
+    axes[2].plot(indices_low, target_loss_low)
+    axes[2].scatter(indices_high, target_loss_high)
+    axes[2].plot(x_coord, y_coord, ".r") 
+
+    axes[3].set_ylabel('Training Loss')
+    axes[3].set_xlabel('Iterations')
+    x_coord = indices_high[np.argmax(training_loss_high)]
+    y_coord = np.max(training_loss_high)
+    offsetbox = TextArea("Iteration: {}\nLoss: {:.2e}".format(x_coord, y_coord), minimumdescent=False)
+    ab = AnnotationBbox(offsetbox, (x_coord, y_coord),
+                        xybox=(0.02, 0.92),
+                        xycoords='data',
+                        boxcoords=("axes fraction", "axes fraction"),
+                        box_alignment=(0., 0.5),
+                        arrowprops=dict(arrowstyle="->"))
+    axes[3].add_artist(ab)
+    axes[3].plot(indices_low, training_loss_low)
+    axes[3].scatter(indices_high, training_loss_high)
+    axes[3].plot(x_coord, y_coord, ".r") 
+
+    for ax in axes:
+        ax.label_outer()
+    plt.savefig('output/{}.png'.format(experiment_name))
+
+
 
 def save_results():
+    """
     state.net.eval()
     # Save output data as fits files.
 
@@ -206,6 +287,17 @@ def save_results():
         common.saveFigure('output/HR_Output_{}.png'.format(j), hdu.data[0,0])
         output_residual = hdu.data[0,0] - np.array(state.imgs[j]['HR_pil'])
         common.saveFigure('output/Output_Residual_{}.png'.format(j), output_residual)
+    """
+    config = common.get_config()
+    experiment_name = config['DEFAULT']['experiment_name']
+    make_summary_figure(
+        state.history_low['iteration'], state.history_high['iteration'],
+        state.history_low['psnr_HR'], state.history_high['psnr_HR'],
+        state.history_low['psnr_LR'], state.history_high['psnr_LR'],
+        state.history_low['target_loss'], state.history_high['target_loss'],
+        state.history_low['training_loss'], state.history_high['training_loss'],
+        experiment_name
+    )
 
 def printMetrics():
     print("Max PSNR HR: {}".format(max(state.history['psnr_HR'])))

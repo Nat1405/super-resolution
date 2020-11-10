@@ -66,7 +66,6 @@ print(config['DEFAULT']['OPTIMIZER'])
 common.optimize(config['DEFAULT']['OPTIMIZER'], p, c, config.getfloat('DEFAULT', 'LR'), config.getint('DEFAULT', 'num_iter'))
 
 
-#sr_utils.save_results()
+sr_utils.save_results()
 
 #sr_utils.printMetrics()
-
