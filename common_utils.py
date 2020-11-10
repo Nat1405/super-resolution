@@ -39,7 +39,10 @@ def get_config():
     args = parser.parse_args()
     config = configparser.ConfigParser()
     config.sections()
-    config.read(args.config)
+    if args.config:
+        config.read(args.config)
+    else:
+        config.read("config.cfg")
     return config
 
 def crop_image(img, d=32):
@@ -118,20 +121,15 @@ def plot_image_grid(images_np, nrow =8, factor=1, interpolation='lanczos'):
     
     return grid
 
-def load(path):
-    """Load PIL image."""
-    img = Image.open(path)
-    return img
-
-
 def get_image(path):
-    """Loads a fits file to a numpy array normalized to [0,1]
+    """Loads a fits file to a torch tensor normalized to [0,1], with shape (1,H,W)
     """
     with fits.open(path) as hdul:
         Interval = astropy.visualization.MinMaxInterval()
         img_np = Interval((hdul['SCI'].data.astype(np.float32))).copy()
+        img = torch.from_numpy(np.expand_dims(img_np, axis=0)).type(state.dtype)
 
-    return img_np
+    return img
 
 
 

@@ -80,6 +80,99 @@ def blurImage(img):
     return Image.fromarray(Interval(output.squeeze(0).numpy()[0]), mode='F')
 
 
+def make_baseline_figure(HR, bicubic_HR, LR, name):
+    # Make baseline comparision figure.
+    # HR, Bicubic, LR (nearest-neighbor upsampled).
+    config = common.get_config()
+    m = nn.Upsample(scale_factor=config.getint("DEFAULT", "factor"), mode='nearest')
+    up_LR = m(LR.unsqueeze(0)).squeeze(0)
+
+    ncols = 3
+    nrows = 1
+    fig, axes = plt.subplots(nrows, ncols, figsize=(14,7))
+    fig.suptitle('{}'.format(name), fontsize=16)
+
+    axes[0].imshow(torch.flip(HR.permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[0].set_title('HR')
+    axes[0].set_xlabel('({}x{})'.format(HR.size()[1], HR.size()[2]))
+    
+    axes[1].imshow(torch.flip(bicubic_HR.permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[1].set_title('HR_bicubic')
+    axes[1].set_xlabel('({}x{})'.format(bicubic_HR.size()[1], bicubic_HR.size()[2]))
+    
+    axes[2].imshow(torch.flip(up_LR.permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[2].set_title('LR (NN-Upsampled)')
+    axes[2].set_xlabel('({}x{})'.format(LR.size()[1], LR.size()[2]))
+
+    for ax in axes:
+        ax.set_xticks([])
+        ax.set_yticks([])
+    plt.subplots_adjust(wspace=0, hspace=0)
+    plt.savefig(name)
+
+def make_progress_figure(HR, HR_bicubic, HR_out, LR, LR_out, HR_name, LR_name):
+    """Make two figures; one tracks HR progress, one tracks LR progress.
+    HR, ..., LR_out: tensors of shape (1,H,W) or (1,H/factor,W/factor)"""
+    
+    # Make HR comparison figure
+    ncols = 5
+    nrows = 1
+    fig, axes = plt.subplots(nrows, ncols, figsize=(14,7))
+    fig.suptitle('{}\n({}x{})'.format(HR_name, HR.size()[1], HR.size()[2]), fontsize=16)
+
+    axes[0].imshow(torch.flip(HR.permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[0].set_title('HR')
+    # Make HR output plot; include PSNR
+    axes[1].imshow(torch.flip(HR_out.permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[1].set_title('HR Output')
+    psnr_HR = compare_psnr(HR.numpy(), HR_out.numpy())
+    axes[1].set_xlabel('PSNR HR: {:.2f}'.format(psnr_HR))
+
+    axes[2].imshow(torch.flip(HR_bicubic.permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[2].set_title('HR_bicubic')
+    psnr_bicubic = compare_psnr(HR.numpy(), HR_bicubic.numpy())
+    axes[2].set_xlabel('PSNR Bicubic: {:.2f}'.format(psnr_bicubic))
+
+    axes[3].imshow(torch.flip((HR_bicubic-HR).permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[3].set_title('Residual: \nBicubic - HR')
+    bicubic_loss = compare_mse(HR.numpy(), HR_bicubic.numpy())
+    axes[3].set_xlabel('MSE HR / Bicubic: {:.2e}'.format(bicubic_loss))
+
+    axes[4].imshow(torch.flip((HR_out-HR).permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[4].set_title('Residual: \nHR Output - HR')
+    target_loss = compare_mse(HR.numpy(), HR_out.numpy())
+    axes[4].set_xlabel('MSE HR / HR Output: {:.2e}'.format(target_loss))
+
+    for ax in axes:
+        ax.set_xticks([])
+        ax.set_yticks([])
+    plt.subplots_adjust(wspace=0, hspace=0)
+    plt.savefig(HR_name)
+
+    # Make LR comparison figure
+    ncols = 3
+    nrows = 1
+    fig, axes = plt.subplots(nrows, ncols, figsize=(14,7))
+    fig.suptitle('{}\n({}x{})'.format(LR_name, LR.size()[1], LR.size()[2]), fontsize=16)
+
+    axes[0].imshow(torch.flip(LR.permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[0].set_title('LR')
+    
+    axes[1].imshow(torch.flip(LR_out.permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[1].set_title('LR Output')
+    psnr_LR = compare_psnr(LR.numpy(), LR_out.numpy())
+    axes[1].set_xlabel('PSNR LR: {:.2f}'.format(psnr_LR))
+
+    axes[2].imshow(torch.flip((LR_out-LR).permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[2].set_title('Residual: \nLR Output - LR')
+    training_loss = compare_mse(LR.numpy(), LR_out.numpy())
+    axes[2].set_xlabel('MSE LR / LR Output: {:.2e}'.format(training_loss))
+
+    for ax in axes:
+        ax.set_xticks([])
+        ax.set_yticks([])
+    plt.subplots_adjust(wspace=0, hspace=0)
+    plt.savefig(LR_name)
 
 
 def save_results():
@@ -154,69 +247,74 @@ def load_LR_HR_imgs_sr(fname):
         imsize: (width, height)
         crop_coordinates: (left, upper)
     '''
-
     config = common.get_config()
 
-    # Load fits file to [0,1] normalized numpy array
-    img_orig_np = common.get_image(fname)
-    orig_pil = Image.fromarray(img_orig_np)
-    orig_pil_blurred = blurImage(orig_pil)
+    # Load fits file to [0,1] normalized torch tensor with shape (1,H,W)
+    orig_torch = common.get_image(fname)
+    #orig_pil_blurred = blurImage(orig_pil)
 
-    HR_pil = crop(orig_pil)
-    HR_pil_blurred = crop(orig_pil_blurred)
+    HR_torch = crop(orig_torch)
+    #HR_pil_blurred = crop(orig_pil_blurred)
 
     # Create low resolution
-    LR_pil = downsample(HR_pil)
-    LR_pil_blurred = downsample(HR_pil_blurred)
+    LR_torch = downsample(HR_torch)
+    #LR_pil_blurred = downsample(HR_pil_blurred)
 
-    print('HR and LR resolutions: %s, %s' % (str(HR_pil.size), str(LR_pil.size)))
+    print('HR and LR resolutions: %s, %s' % (str(HR_torch.size()), str(LR_torch.size())))
 
     input_depth = config.getint('DEFAULT', 'input_depth')
     imsize = config.getint('DEFAULT', 'imsize')
-    net_input = common.get_noise(input_depth, 'noise', imsize).type(state.dtype).detach()
+    net_input = common.get_noise(input_depth, 'noise', imsize).type(state.dtype)
 
     # Create bicubic upsampled versions of LR images for reference
-    HR_bicubic = LR_pil.resize(HR_pil.size, Image.BICUBIC)
-    HR_bicubic_blurred = LR_pil_blurred.resize(HR_pil_blurred.size, Image.BICUBIC)
+    m = nn.Upsample(scale_factor=config.getint("DEFAULT", "factor"), mode='bicubic')
+    HR_torch_bicubic = m(LR_torch.unsqueeze(0)).squeeze(0)
+    #HR_bicubic_blurred = LR_pil_blurred.resize(HR_pil_blurred.size, Image.BICUBIC)
 
     out =   {
-            'orig_pil': orig_pil,
-            'orig_pil_blurred': orig_pil_blurred,
-            'HR_pil': HR_pil,
-            'HR_pil_blurred': HR_pil_blurred,
-            'LR_pil': LR_pil,
-            'LR_pil_blurred': LR_pil_blurred,
+            'orig_torch': orig_torch,
+            #'orig_pil_blurred': orig_pil_blurred,
+            'HR_torch': HR_torch,
+            #'HR_pil_blurred': HR_pil_blurred,
+            'LR_torch': LR_torch,
+            #'LR_pil_blurred': LR_pil_blurred,
             'net_input': net_input,
-            'HR_bicubic': HR_bicubic,
-            'HR_bicubic_blurred': HR_bicubic_blurred
+            'HR_torch_bicubic': HR_torch_bicubic,
+            #'HR_bicubic_blurred': HR_bicubic_blurred
         }
 
     return out
 
 
-def crop(img_orig_pil):
+def crop(orig_torch):
+    """Crops a torch tensor in [0..1.], (1,H,W).
+        crop_x: left x of cropping
+        crop_y: lower y of cropping
+    """
     config = common.get_config()
-    crop_coordinates = (config.getint('DEFAULT', 'crop_x'), config.getint('DEFAULT', 'crop_y'))
-    imsize = (config.getint('DEFAULT', 'imsize'), config.getint('DEFAULT', 'imsize'))
-    factor = 4
-    # Crop the image
-    img_HR_pil = img_orig_pil.crop(
-                    (crop_coordinates[0], 
-                    crop_coordinates[1]-imsize[1],
-                    crop_coordinates[0]+imsize[0],
-                    crop_coordinates[1]))
-    return img_HR_pil
+    crops = {
+        "crop_x": config.getint('DEFAULT', 'crop_x'),
+        "crop_y":  config.getint('DEFAULT', 'crop_y'),
+    }
 
-def downsample(img_HR_torch):
+    imsize = config.getint('DEFAULT', 'imsize')
+    # Crop the image
+    HR_torch = orig_torch[:, 
+        crops['crop_y']:crops['crop_y']+imsize,
+        crops['crop_x']:crops['crop_x']+imsize
+    ]
+    return HR_torch
+
+def downsample(HR_torch):
     """Downsample an image using average pooling.
-        img_HR_torch: tensor image with shape (1,1,H,W), in [0..1].
+        HR_torch: tensor image with shape (1,H,W), in [0..1].
     """
     config = common.get_config()
     factor = config.getint('DEFAULT', 'factor')
 
     m = nn.AvgPool2d(factor)
-    img_LR_torch = m(img_HR_torch)
-    return img_LR_torch
+    LR_torch = m(HR_torch)
+    return LR_torch
 
 def tv_loss(x, beta = 0.5):
     '''Calculates TV loss for an image `x`.

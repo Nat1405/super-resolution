@@ -18,18 +18,6 @@ import sr_utils
 from build_closure import build_closure
 from build_network import build_network
 
-# Use GPU if available
-if torch.cuda.is_available():
-    torch.backends.cudnn.enabled = True
-    torch.backends.cudnn.benchmark = True
-    dtype = torch.cuda.FloatTensor
-    state.dtype = dtype
-else:
-    torch.backends.cudnn.enabled = False
-    torch.backends.cudnn.benchmark = False
-    dtype = torch.FloatTensor
-    state.dtype = dtype 
-
 # Setup space to save checkpoints and inputs
 if os.path.exists('output'):
     shutil.rmtree("output")
