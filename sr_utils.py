@@ -222,8 +222,8 @@ def make_summary_figure(
     axes[1].plot(x_coord, y_coord, ".r") 
 
     axes[2].set_ylabel('Target Loss')
-    x_coord = indices_high[np.argmax(target_loss_high)]
-    y_coord = np.max(target_loss_high)
+    x_coord = indices_high[np.argmin(target_loss_high)]
+    y_coord = np.min(target_loss_high)
     offsetbox = TextArea("Iteration: {}\nLoss: {:.2e}".format(x_coord, y_coord), minimumdescent=False)
     ab = AnnotationBbox(offsetbox, (x_coord, y_coord),
                         xybox=(0.02, 0.92),
@@ -238,8 +238,8 @@ def make_summary_figure(
 
     axes[3].set_ylabel('Training Loss')
     axes[3].set_xlabel('Iterations')
-    x_coord = indices_high[np.argmax(training_loss_high)]
-    y_coord = np.max(training_loss_high)
+    x_coord = indices_high[np.argmin(training_loss_high)]
+    y_coord = np.min(training_loss_high)
     offsetbox = TextArea("Iteration: {}\nLoss: {:.2e}".format(x_coord, y_coord), minimumdescent=False)
     ab = AnnotationBbox(offsetbox, (x_coord, y_coord),
                         xybox=(0.02, 0.92),
