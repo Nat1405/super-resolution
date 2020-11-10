@@ -54,7 +54,7 @@ for j in range(len(state.imgs)):
         'output/baseline_{}.png'.format(j)
     )
 
-state.net = build_network(config.getint('DEFAULT', 'imsize'), state.dtype)
+state.net = build_network(state.dtype)
 
 c = build_closure(writer, state.dtype)
 

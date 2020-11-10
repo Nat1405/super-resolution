@@ -11,7 +11,7 @@ tv_weight = 0.0
 
 reg_noise_std = 0.03
 
-def build_network(imsize, dtype):
+def build_network(dtype):
 	"""
 	Imsize: (w,h) tuple
 	"""

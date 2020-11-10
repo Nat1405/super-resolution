@@ -337,10 +337,6 @@ def put_in_center(img_np, target_size):
 def load_LR_HR_imgs_sr(fname):
     '''Loads an image, resizes it, center crops and downscales.
 
-    Args: 
-        fname: path to the image
-        imsize: (width, height)
-        crop_coordinates: (left, upper)
     '''
     config = common.get_config()
 
@@ -358,8 +354,9 @@ def load_LR_HR_imgs_sr(fname):
     print('HR and LR resolutions: %s, %s' % (str(HR_torch.size()), str(LR_torch.size())))
 
     input_depth = config.getint('DEFAULT', 'input_depth')
-    imsize = config.getint('DEFAULT', 'imsize')
-    net_input = common.get_noise(input_depth, 'noise', imsize).type(state.dtype)
+    imsize_x = config.getint('DEFAULT', 'imsize_x')
+    imsize_y = config.getint('DEFAULT', 'imsize_y')
+    net_input = common.get_noise(input_depth, 'noise', (imsize_y, imsize_x)).type(state.dtype)
 
     # Create bicubic upsampled versions of LR images for reference
     m = nn.Upsample(scale_factor=config.getint("DEFAULT", "factor"), mode='bicubic')
@@ -392,11 +389,12 @@ def crop(orig_torch):
         "crop_y":  config.getint('DEFAULT', 'crop_y'),
     }
 
-    imsize = config.getint('DEFAULT', 'imsize')
+    imsize_x = config.getint('DEFAULT', 'imsize_x')
+    imsize_y = config.getint('DEFAULT', 'imsize_y')
     # Crop the image
     HR_torch = orig_torch[:, 
-        crops['crop_y']:crops['crop_y']+imsize,
-        crops['crop_x']:crops['crop_x']+imsize
+        crops['crop_y']:crops['crop_y']+imsize_y,
+        crops['crop_x']:crops['crop_x']+imsize_x
     ]
     return HR_torch
 
