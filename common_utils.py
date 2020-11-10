@@ -29,7 +29,7 @@ def makeResidual(after_HR, before_HR):
     before = torch_to_np(before_HR)
     result = after - before
     Interval = astropy.visualization.MinMaxInterval()
-    result = torch.tensor(np.expand_dims(Interval(result), axis=0)).type(state.dtype)
+    result = torch.tensor(np.expand_dims(Interval(result), axis=0)).type(state.dtype).cpu()
     return result
 
 

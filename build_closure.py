@@ -141,6 +141,8 @@ def build_closure(writer, dtype):
         ground_truth_LR = ground_truth_LR.cpu()
         ground_truth_HR = ground_truth_HR.cpu()
         bicubic_HR = bicubic_HR.cpu()
+        blurred_LR = blurred_LR.cpu()
+        blurred_HR = blurred_HR.cpu()
 
         if (state.i % plot_steps_low == 0) and (index == 0):
             psnr_LR = compare_psnr(common.torch_to_np(ground_truth_LR), common.torch_to_np(out_LR))
