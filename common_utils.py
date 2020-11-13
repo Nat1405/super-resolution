@@ -29,7 +29,7 @@ def makeResidual(after_HR, before_HR):
     before = torch_to_np(before_HR)
     result = after - before
     Interval = astropy.visualization.MinMaxInterval()
-    result = torch.tensor(np.expand_dims(Interval(result), axis=0)).type(state.dtype).cpu()
+    result = torch.tensor(Interval(result)).type(state.dtype).cpu()
     return result
 
 
@@ -123,13 +123,24 @@ def plot_image_grid(images_np, nrow =8, factor=1, interpolation='lanczos'):
 
 def get_image(path):
     """Loads a fits file to a torch tensor normalized to [0,1], with shape (1,H,W)
+    Loads a png file to a 3 channel tensor normalized to [0,1], with shape (3,H,W)
     """
-    with fits.open(path) as hdul:
+    file_extension = os.path.split(path)[-1].split('.')[-1]
+    if file_extension == "png":
+        img = Image.open(path)
+        img_np = np.array(img)
         Interval = astropy.visualization.MinMaxInterval()
-        img_np = Interval((hdul['SCI'].data.astype(np.float32))).copy()
-        img = torch.from_numpy(np.expand_dims(img_np, axis=0)).type(state.dtype)
-
-    return img
+        normed_img_np = Interval(img_np)
+        t = torch.from_numpy(np.moveaxis(normed_img_np, -1, 0).copy()).type(state.dtype)
+        return t
+    elif file_extension == "fits":
+        with fits.open(path) as hdul:
+            Interval = astropy.visualization.MinMaxInterval()
+            img_np = Interval((hdul['SCI'].data.astype(np.float32))).copy()
+            img = torch.from_numpy(np.expand_dims(img_np, axis=0)).type(state.dtype)
+        return img
+    else:
+        raise ValueError("{} is an invalid file type.".format(path))
 
 
 
@@ -208,9 +219,14 @@ def np_to_torch(img_np):
 def torch_to_np(img_var):
     '''Converts an image in torch.Tensor format to np.array.
 
-    From 1 x C x W x H [0..1] to  C x W x H [0..1]
+    From C x W x H [0..1] to  either W x H [0..1] or 3 x W x H [0..1]
     '''
-    return img_var.detach().cpu().numpy()[0]
+    if img_var.shape[0] == 1:
+        return img_var.detach().cpu().numpy()[0]
+    elif img_var.shape[0] == 3:
+        return img_var.detach().cpu().numpy()
+    else:
+        raise ValueError("Invalid shape!")
 
 def saveFigure(path, image):
     config = get_config()

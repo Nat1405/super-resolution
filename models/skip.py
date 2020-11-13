@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from .common import *
+import common_utils
 
 def skip(
         num_input_channels=2, num_output_channels=1, 
@@ -93,6 +94,8 @@ def skip(
         input_depth = num_channels_down[i]
         model_tmp = deeper_main
 
+    config = common_utils.get_config()
+    num_output_channels = config.getint("DEFAULT", "n_channels")
     model.add(conv(num_channels_up[0], num_output_channels, 1, bias=need_bias, pad=pad))
     if need_sigmoid:
         model.add(nn.Sigmoid())

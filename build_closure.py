@@ -47,7 +47,7 @@ def build_closure(writer, dtype):
     blur = (config['DEFAULT']['blur'] != 'none')
 
     mse = torch.nn.MSELoss().type(dtype)
-    downsampler = Downsampler(n_planes=1, factor=4, kernel_type='lanczos2', phase=0.5, preserve_size=True).type(dtype)
+    downsampler = Downsampler(n_planes=config.getint('DEFAULT', 'n_channels'), factor=4, kernel_type='lanczos2', phase=0.5, preserve_size=True).type(dtype)
 
     loss_network = None
     """
