@@ -123,7 +123,10 @@ def build_closure(writer, dtype):
         noise = None
 
         # Feed through actual network
-        out_HR = state.net(net_input)
+        net_input_noisy = net_input.detach().clone()
+        noise_t = net_input.detach().clone()
+        net_input_noisy = net_input_noisy + (noise_t.normal_() * 0.03)
+        out_HR = state.net(net_input_noisy)
         if noise:
             with torch.no_grad():
                 out_HR = out_HR + background*torch.randn(out_HR.size()).type(state.dtype)
