@@ -92,20 +92,36 @@ def make_baseline_figure(HR, bicubic_HR, LR, name):
 
     ncols = 3
     nrows = 1
-    fig, axes = plt.subplots(nrows, ncols, figsize=(14,7))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(14,7), dpi=200)
     fig.suptitle('{}'.format(name), fontsize=16)
 
-    axes[0].imshow(torch.flip(HR.permute(1,2,0), dims=(0,)), cmap='gray')
+    if config.getint("DEFAULT", "n_channels") == 1:
+        HR = HR.permute(1,2,0)[:,:,0]
+        bicubic_HR = bicubic_HR.permute(1,2,0)[:,:,0]
+        up_LR = up_LR.permute(1,2,0)[:,:,0]
+        HR_size = HR.size()
+        bicubic_HR_size = bicubic_HR.size()
+        up_LR_size = up_LR.size()
+    else:
+        HR = HR.permute(1,2,0)
+        bicubic_HR = bicubic_HR.permute(1,2,0)
+        up_LR = up_LR.permute(1,2,0)
+        HR_size = (HR.size()[1], HR.size()[2])
+        bicubic_HR_size = (bicubic_HR.size()[1], bicubic_HR.size()[2])
+        up_LR_size = (up_LR.size()[1], up_LR.size()[2])
+
+
+    axes[0].imshow(torch.flip(HR, dims=(0,)), cmap='gray')
     axes[0].set_title('HR')
-    axes[0].set_xlabel('({}x{})'.format(HR.size()[1], HR.size()[2]))
+    axes[0].set_xlabel('({}x{})'.format(HR_size[0], HR_size[1]))
     
-    axes[1].imshow(torch.flip(bicubic_HR.permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[1].imshow(torch.flip(bicubic_HR, dims=(0,)), cmap='gray')
     axes[1].set_title('HR_bicubic')
-    axes[1].set_xlabel('({}x{})'.format(bicubic_HR.size()[1], bicubic_HR.size()[2]))
+    axes[1].set_xlabel('({}x{})'.format(bicubic_HR_size[0], bicubic_HR_size[1]))
     
-    axes[2].imshow(torch.flip(up_LR.permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[2].imshow(torch.flip(up_LR, dims=(0,)), cmap='gray')
     axes[2].set_title('LR (NN-Upsampled)')
-    axes[2].set_xlabel('({}x{})'.format(LR.size()[1], LR.size()[2]))
+    axes[2].set_xlabel('({}x{})'.format(up_LR_size[0], up_LR_size[1]))
 
     for ax in axes:
         ax.set_xticks([])
@@ -119,30 +135,50 @@ def make_progress_figure(HR, HR_bicubic, HR_out, LR, LR_out, HR_name, LR_name):
     HR, ..., LR_out: tensors of shape (1,H,W) or (1,H/factor,W/factor)"""
     
     # Make HR comparison figure
+    config = common.get_config()
+
     ncols = 5
     nrows = 1
-    fig, axes = plt.subplots(nrows, ncols, figsize=(14,7))
-    fig.suptitle('{}\n({}x{})'.format(HR_name, HR.size()[1], HR.size()[2]), fontsize=16)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(14,7), dpi=200)
 
-    axes[0].imshow(torch.flip(HR.permute(1,2,0), dims=(0,)), cmap='gray')
+    if config.getint("DEFAULT", "n_channels") == 1:
+        HR = HR.permute(1,2,0)[:,:,0]
+        HR_out = HR_out.permute(1,2,0)[:,:,0]
+        HR_bicubic = HR_bicubic.permute(1,2,0)[:,:,0]
+        LR = LR.permute(1,2,0)[:,:,0]
+        LR_out = LR_out.permute(1,2,0)[:,:,0]
+        HR_size = HR.size()
+        LR_size = LR.size()
+    else:
+        HR = HR.permute(1,2,0)
+        HR_out = HR_out.permute(1,2,0)
+        HR_bicubic = HR_bicubic.permute(1,2,0)
+        LR = LR.permute(1,2,0)
+        LR_out = LR_out.permute(1,2,0)
+        HR_size = (HR.size()[1], HR.size()[2])
+        LR_size = (LR.size()[1], LR.size()[2])
+
+    fig.suptitle('{}\n({}x{})'.format(HR_name, HR_size[0], HR_size[1]), fontsize=16)
+
+    axes[0].imshow(torch.flip(HR, dims=(0,)), cmap='gray')
     axes[0].set_title('HR')
     # Make HR output plot; include PSNR
-    axes[1].imshow(torch.flip(HR_out.permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[1].imshow(torch.flip(HR_out, dims=(0,)), cmap='gray')
     axes[1].set_title('HR Output')
     psnr_HR = compare_psnr(HR.numpy(), HR_out.numpy())
     axes[1].set_xlabel('PSNR HR: {:.2f}'.format(psnr_HR))
 
-    axes[2].imshow(torch.flip(HR_bicubic.permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[2].imshow(torch.flip(HR_bicubic, dims=(0,)), cmap='gray')
     axes[2].set_title('HR_bicubic')
     psnr_bicubic = compare_psnr(HR.numpy(), HR_bicubic.numpy())
     axes[2].set_xlabel('PSNR Bicubic: {:.2f}'.format(psnr_bicubic))
 
-    axes[3].imshow(torch.flip((HR_bicubic-HR).permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[3].imshow(torch.flip((HR_bicubic-HR), dims=(0,)), cmap='gray')
     axes[3].set_title('Residual: \nBicubic - HR')
     bicubic_loss = compare_mse(HR.numpy(), HR_bicubic.numpy())
     axes[3].set_xlabel('MSE HR / Bicubic: {:.2e}'.format(bicubic_loss))
 
-    axes[4].imshow(torch.flip((HR_out-HR).permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[4].imshow(torch.flip((HR_out-HR), dims=(0,)), cmap='gray')
     axes[4].set_title('Residual: \nHR Output - HR')
     target_loss = compare_mse(HR.numpy(), HR_out.numpy())
     axes[4].set_xlabel('MSE HR / HR Output: {:.2e}'.format(target_loss))
@@ -157,18 +193,18 @@ def make_progress_figure(HR, HR_bicubic, HR_out, LR, LR_out, HR_name, LR_name):
     # Make LR comparison figure
     ncols = 3
     nrows = 1
-    fig, axes = plt.subplots(nrows, ncols, figsize=(14,7))
-    fig.suptitle('{}\n({}x{})'.format(LR_name, LR.size()[1], LR.size()[2]), fontsize=16)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(14,7), dpi=200)
+    fig.suptitle('{}\n({}x{})'.format(LR_name, LR_size[0], LR_size[1]), fontsize=16)
 
-    axes[0].imshow(torch.flip(LR.permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[0].imshow(torch.flip(LR, dims=(0,)), cmap='gray')
     axes[0].set_title('LR')
     
-    axes[1].imshow(torch.flip(LR_out.permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[1].imshow(torch.flip(LR_out, dims=(0,)), cmap='gray')
     axes[1].set_title('LR Output')
     psnr_LR = compare_psnr(LR.numpy(), LR_out.numpy())
     axes[1].set_xlabel('PSNR LR: {:.2f}'.format(psnr_LR))
 
-    axes[2].imshow(torch.flip((LR_out-LR).permute(1,2,0), dims=(0,)), cmap='gray')
+    axes[2].imshow(torch.flip((LR_out-LR), dims=(0,)), cmap='gray')
     axes[2].set_title('Residual: \nLR Output - LR')
     training_loss = compare_mse(LR.numpy(), LR_out.numpy())
     axes[2].set_xlabel('MSE LR / LR Output: {:.2e}'.format(training_loss))
@@ -187,7 +223,7 @@ def make_summary_figure(
     target_loss_low, target_loss_high,
     training_loss_low, training_loss_high,
     experiment_name):
-    fig, axes = plt.subplots(4, 1, sharex=True, gridspec_kw={'hspace': 0}, figsize=(7,14))
+    fig, axes = plt.subplots(4, 1, sharex=True, gridspec_kw={'hspace': 0}, figsize=(7,14), dpi=200)
     fig.suptitle('{}'.format(experiment_name), fontsize=16)
 
     axes[0].set_ylabel('PSNR HR_Out')

@@ -142,4 +142,4 @@ output/
 config.cfg
 images/
 *.fits
-
+*.png

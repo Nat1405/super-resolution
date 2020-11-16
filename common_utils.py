@@ -29,6 +29,8 @@ def makeResidual(after_HR, before_HR):
     before = torch_to_np(before_HR)
     result = after - before
     Interval = astropy.visualization.MinMaxInterval()
+    if len(result.shape) == 2:
+        result = np.expand_dims(result, axis=0)
     result = torch.tensor(Interval(result)).type(state.dtype).cpu()
     return result
 
@@ -128,7 +130,7 @@ def get_image(path):
     file_extension = os.path.split(path)[-1].split('.')[-1]
     if file_extension == "png":
         img = Image.open(path)
-        img_np = np.array(img)
+        img_np = np.flipud(np.array(img))
         Interval = astropy.visualization.MinMaxInterval()
         normed_img_np = Interval(img_np)
         t = torch.from_numpy(np.moveaxis(normed_img_np, -1, 0).copy()).type(state.dtype)
