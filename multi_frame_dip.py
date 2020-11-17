@@ -51,7 +51,7 @@ for j in range(len(state.imgs)):
         state.imgs[j]['HR_torch'].cpu(),
         state.imgs[j]['HR_torch_bicubic'].cpu(),
         state.imgs[j]['LR_torch'].cpu(),
-        'output/baseline_{}.png'.format(j)
+        'baseline_{}'.format(j)
     )
 
 state.net = build_network(state.dtype)

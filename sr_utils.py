@@ -92,10 +92,12 @@ def make_baseline_figure(HR, bicubic_HR, LR, name):
 
     ncols = 3
     nrows = 1
-    fig, axes = plt.subplots(nrows, ncols, figsize=(14,7), dpi=200)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(14, 5), dpi=250)
     fig.suptitle('{}'.format(name), fontsize=16)
 
-    if config.getint("DEFAULT", "n_channels") == 1:
+    n_channels = config.getint("DEFAULT", "n_channels")
+
+    if n_channels == 1:
         HR = HR.permute(1,2,0)[:,:,0]
         bicubic_HR = bicubic_HR.permute(1,2,0)[:,:,0]
         up_LR = up_LR.permute(1,2,0)[:,:,0]
@@ -107,27 +109,27 @@ def make_baseline_figure(HR, bicubic_HR, LR, name):
         bicubic_HR = bicubic_HR.permute(1,2,0)
         up_LR = up_LR.permute(1,2,0)
         HR_size = (HR.size()[1], HR.size()[2])
-        bicubic_HR_size = (bicubic_HR.size()[1], bicubic_HR.size()[2])
-        up_LR_size = (up_LR.size()[1], up_LR.size()[2])
+        bicubic_HR_size = (bicubic_HR.size()[0], bicubic_HR.size()[1])
+        up_LR_size = (up_LR.size()[0], up_LR.size()[1])
 
 
     axes[0].imshow(torch.flip(HR, dims=(0,)), cmap='gray')
     axes[0].set_title('HR')
-    axes[0].set_xlabel('({}x{})'.format(HR_size[0], HR_size[1]))
+    axes[0].set_xlabel('({}x{}x{})'.format(HR_size[0], HR_size[1], n_channels))
     
     axes[1].imshow(torch.flip(bicubic_HR, dims=(0,)), cmap='gray')
     axes[1].set_title('HR_bicubic')
-    axes[1].set_xlabel('({}x{})'.format(bicubic_HR_size[0], bicubic_HR_size[1]))
+    axes[1].set_xlabel('({}x{}x{})'.format(bicubic_HR_size[0], bicubic_HR_size[1], n_channels))
     
     axes[2].imshow(torch.flip(up_LR, dims=(0,)), cmap='gray')
     axes[2].set_title('LR (NN-Upsampled)')
-    axes[2].set_xlabel('({}x{})'.format(up_LR_size[0], up_LR_size[1]))
+    axes[2].set_xlabel('({}x{}x{})'.format(up_LR_size[0], up_LR_size[1], n_channels))
 
     for ax in axes:
         ax.set_xticks([])
         ax.set_yticks([])
     plt.subplots_adjust(wspace=0, hspace=0)
-    plt.savefig(name)
+    plt.savefig("output/{}.png".format(name))
     plt.close()
 
 def make_progress_figure(HR, HR_bicubic, HR_out, LR, LR_out, HR_name, LR_name):
@@ -139,9 +141,11 @@ def make_progress_figure(HR, HR_bicubic, HR_out, LR, LR_out, HR_name, LR_name):
 
     ncols = 5
     nrows = 1
-    fig, axes = plt.subplots(nrows, ncols, figsize=(14,7), dpi=200)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(14, 5), dpi=250)
 
-    if config.getint("DEFAULT", "n_channels") == 1:
+    n_channels = config.getint("DEFAULT", "n_channels")
+
+    if n_channels == 1:
         HR = HR.permute(1,2,0)[:,:,0]
         HR_out = HR_out.permute(1,2,0)[:,:,0]
         HR_bicubic = HR_bicubic.permute(1,2,0)[:,:,0]
@@ -155,10 +159,10 @@ def make_progress_figure(HR, HR_bicubic, HR_out, LR, LR_out, HR_name, LR_name):
         HR_bicubic = HR_bicubic.permute(1,2,0)
         LR = LR.permute(1,2,0)
         LR_out = LR_out.permute(1,2,0)
-        HR_size = (HR.size()[1], HR.size()[2])
-        LR_size = (LR.size()[1], LR.size()[2])
+        HR_size = (HR.size()[0], HR.size()[1])
+        LR_size = (LR.size()[0], LR.size()[1])
 
-    fig.suptitle('{}\n({}x{})'.format(HR_name, HR_size[0], HR_size[1]), fontsize=16)
+    fig.suptitle('{}\n({}x{}x{})'.format(HR_name, HR_size[0], HR_size[1], n_channels), fontsize=16)
 
     axes[0].imshow(torch.flip(HR, dims=(0,)), cmap='gray')
     axes[0].set_title('HR')
@@ -187,14 +191,14 @@ def make_progress_figure(HR, HR_bicubic, HR_out, LR, LR_out, HR_name, LR_name):
         ax.set_xticks([])
         ax.set_yticks([])
     plt.subplots_adjust(wspace=0, hspace=0)
-    plt.savefig(HR_name)
+    plt.savefig("output/{}.png".format(HR_name))
     plt.close()
 
     # Make LR comparison figure
     ncols = 3
     nrows = 1
-    fig, axes = plt.subplots(nrows, ncols, figsize=(14,7), dpi=200)
-    fig.suptitle('{}\n({}x{})'.format(LR_name, LR_size[0], LR_size[1]), fontsize=16)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(14, 5), dpi=250)
+    fig.suptitle('{}\n({}x{}x{})'.format(LR_name, LR_size[0], LR_size[1], n_channels), fontsize=16)
 
     axes[0].imshow(torch.flip(LR, dims=(0,)), cmap='gray')
     axes[0].set_title('LR')
@@ -213,7 +217,7 @@ def make_progress_figure(HR, HR_bicubic, HR_out, LR, LR_out, HR_name, LR_name):
         ax.set_xticks([])
         ax.set_yticks([])
     plt.subplots_adjust(wspace=0, hspace=0)
-    plt.savefig(LR_name)
+    plt.savefig("output/{}.png".format(LR_name))
     plt.close()
 
 def make_summary_figure(
@@ -223,7 +227,7 @@ def make_summary_figure(
     target_loss_low, target_loss_high,
     training_loss_low, training_loss_high,
     experiment_name):
-    fig, axes = plt.subplots(4, 1, sharex=True, gridspec_kw={'hspace': 0}, figsize=(7,14), dpi=200)
+    fig, axes = plt.subplots(4, 1, sharex=True, gridspec_kw={'hspace': 0}, figsize=(7,14), dpi=250)
     fig.suptitle('{}'.format(experiment_name), fontsize=16)
 
     axes[0].set_ylabel('PSNR HR_Out')

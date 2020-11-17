@@ -202,8 +202,8 @@ def build_closure(writer, dtype):
                 out_HR,
                 ground_truth_LR,
                 out_LR,
-                'output/HR_update_{}.png'.format(state.i),
-                'output/LR_update_{}.png'.format(state.i)
+                'HR_update_{}'.format(state.i),
+                'LR_update_{}'.format(state.i)
             )
         state.i += 1
         
