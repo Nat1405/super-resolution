@@ -12,17 +12,11 @@ else:
 i = 0
 net = None
 imgs = None
-history_low = {
-	"iteration":[],
-	"psnr_HR":[],
-	"psnr_LR":[],
-	"target_loss":[],
-	"training_loss":[]
-}
-history_high = {
-	"iteration":[],
-	"psnr_HR":[],
-	"psnr_LR":[],
-	"target_loss":[],
-	"training_loss":[]
-}
+
+class HistoryTracker:
+	def __init__(self):
+		self.iteration = []
+		self.psnr_HR = []
+		self.psnr_LR = []
+		self.target_loss = []
+		self.training_loss = []

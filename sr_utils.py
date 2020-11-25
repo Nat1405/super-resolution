@@ -329,19 +329,23 @@ def save_results():
         common.saveFigure('output/Output_Residual_{}.png'.format(j), output_residual)
     """
     config = common.get_config()
-    experiment_name = config['DEFAULT']['experiment_name']
-    make_summary_figure(
-        state.history_low['iteration'], state.history_high['iteration'],
-        state.history_low['psnr_HR'], state.history_high['psnr_HR'],
-        state.history_low['psnr_LR'], state.history_high['psnr_LR'],
-        state.history_low['target_loss'], state.history_high['target_loss'],
-        state.history_low['training_loss'], state.history_high['training_loss'],
-        experiment_name
-    )
+    for i in range(len(state.imgs)):
+        experiment_name = config['DEFAULT']['experiment_name'] + "_frame_{}".format(i)
+        make_summary_figure(
+            state.imgs[i]['history_low'].iteration, state.imgs[i]['history_high'].iteration,
+            state.imgs[i]['history_low'].psnr_HR, state.imgs[i]['history_high'].psnr_HR,
+            state.imgs[i]['history_low'].psnr_LR, state.imgs[i]['history_high'].psnr_LR,
+            state.imgs[i]['history_low'].target_loss, state.imgs[i]['history_high'].target_loss,
+            state.imgs[i]['history_low'].training_loss, state.imgs[i]['history_high'].training_loss,
+            experiment_name
+        )
 
 def printMetrics():
+    """
     print("Max PSNR HR: {}".format(max(state.history['psnr_HR'])))
     print("Max PSNR LR: {}".format(max(state.history['psnr_LR'])))
+    """
+    print("NOT IMPLEMENTED")
 
 
 def makeInterpolation(imgs):
@@ -414,6 +418,8 @@ def load_LR_HR_imgs_sr(fname):
             'net_input': net_input,
             'HR_torch_bicubic': HR_torch_bicubic,
             #'HR_bicubic_blurred': HR_bicubic_blurred
+            'history_low': state.HistoryTracker(),
+            'history_high': state.HistoryTracker(),
         }
 
     return out
@@ -447,6 +453,8 @@ def preload_LR_HR(LR_path, HR_path):
             'net_input': net_input,
             'HR_torch_bicubic': HR_torch_bicubic,
             #'HR_bicubic_blurred': HR_bicubic_blurred
+            'history_low': state.HistoryTracker(),
+            'history_high': state.HistoryTracker(),
         }
         state.imgs.append(out)
 

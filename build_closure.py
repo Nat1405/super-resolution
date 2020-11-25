@@ -147,15 +147,15 @@ def build_closure(writer, dtype):
         blurred_LR = blurred_LR.cpu()
         blurred_HR = blurred_HR.cpu()
 
-        if (state.i % plot_steps_low == 0) and (index == 0):
+        if (state.i % plot_steps_low < len(state.imgs)):
             psnr_LR = compare_psnr(common.torch_to_np(ground_truth_LR), common.torch_to_np(out_LR))
             psnr_HR = compare_psnr(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
             target_loss = sr_utils.compare_HR(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
-            state.history_low['iteration'].append(state.i)
-            state.history_low['psnr_LR'].append(psnr_LR)
-            state.history_low['psnr_HR'].append(psnr_HR)
-            state.history_low['target_loss'].append(target_loss)
-            state.history_low['training_loss'].append(total_loss.item())
+            state.imgs[index]['history_low'].iteration.append(state.i)
+            state.imgs[index]['history_low'].psnr_LR.append(psnr_LR)
+            state.imgs[index]['history_low'].psnr_HR.append(psnr_HR)
+            state.imgs[index]['history_low'].target_loss.append(target_loss)
+            state.imgs[index]['history_low'].training_loss.append(total_loss.item())
 
             print("{} {} {} {}".format(state.i, index, psnr_LR, psnr_HR))
 
@@ -165,16 +165,16 @@ def build_closure(writer, dtype):
             writer.add_scalar('Training Loss', total_loss.item(), state.i)
             writer.add_scalar('Target Loss', target_loss, state.i)
 
-        if (state.i % plot_steps_high == 0) and (index == 0):
+        if (state.i % plot_steps_high < len(state.imgs)):
             # Lower frequency capturing of large data
             psnr_LR = compare_psnr(common.torch_to_np(ground_truth_LR), common.torch_to_np(out_LR))
             psnr_HR = compare_psnr(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
             target_loss = sr_utils.compare_HR(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
-            state.history_high['iteration'].append(state.i)
-            state.history_high['psnr_LR'].append(psnr_LR)
-            state.history_high['psnr_HR'].append(psnr_HR)
-            state.history_high['target_loss'].append(target_loss)
-            state.history_high['training_loss'].append(total_loss.item())
+            state.imgs[index]['history_high'].iteration.append(state.i)
+            state.imgs[index]['history_high'].psnr_LR.append(psnr_LR)
+            state.imgs[index]['history_high'].psnr_HR.append(psnr_HR)
+            state.imgs[index]['history_high'].target_loss.append(target_loss)
+            state.imgs[index]['history_high'].training_loss.append(total_loss.item())
 
             # Save parameters
             for name, param in state.net.named_parameters():
@@ -202,8 +202,8 @@ def build_closure(writer, dtype):
                 out_HR,
                 ground_truth_LR,
                 out_LR,
-                'HR_update_{}'.format(state.i),
-                'LR_update_{}'.format(state.i)
+                'HR_update_frame_{}_{}'.format(index, state.i),
+                'LR_update_frame_{}_{}'.format(index, state.i)
             )
         state.i += 1
         
