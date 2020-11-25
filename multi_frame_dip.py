@@ -34,8 +34,14 @@ config = common.get_config()
 # Load images. Crop to produce HR, downsample to produce LR,
 # create bicubic reference frames.
 state.imgs = []
-for im_path in glob.glob(config['DEFAULT']['path_to_images']):
-    state.imgs.append(sr_utils.load_LR_HR_imgs_sr(im_path))
+if config.has_section('LOADING') and config.getboolean('LOADING', 'load_precreated'):
+    sr_utils.preload_LR_HR(
+        config['LOADING']['path_to_LR'],
+        config['LOADING']['path_to_HR']
+    )
+else: 
+    for im_path in glob.glob(config['DEFAULT']['path_to_images']):
+        state.imgs.append(sr_utils.load_LR_HR_imgs_sr(im_path))
 
 # Get baselines, such as psnr and target loss of bicubic.
 #sr_utils.get_baselines(state.imgs)

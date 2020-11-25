@@ -131,6 +131,8 @@ def get_image(path):
     if file_extension == "png":
         img = Image.open(path)
         img_np = np.flipud(np.array(img))
+        if len(img_np.shape) == 3 and img_np.shape[-1] == 4:
+            img_np = img_np[:,:,:3]
         Interval = astropy.visualization.MinMaxInterval()
         normed_img_np = Interval(img_np)
         t = torch.from_numpy(np.moveaxis(normed_img_np, -1, 0).copy()).type(state.dtype)

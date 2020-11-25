@@ -8,7 +8,7 @@ import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
-import sys
+import sys, glob
 from skimage.measure import compare_psnr
 from skimage.measure import compare_mse
 
@@ -417,6 +417,38 @@ def load_LR_HR_imgs_sr(fname):
         }
 
     return out
+
+def preload_LR_HR(LR_path, HR_path):
+    config = common.get_config()
+
+    LRs = sorted(glob.glob(LR_path+"*"))
+    HRs = sorted(glob.glob(HR_path+"*"))
+
+    for LR_name, HR_name in zip(LRs, HRs):
+        orig_torch = common.get_image(HR_name)
+        HR_torch = orig_torch.clone()
+        LR_torch = common.get_image(LR_name)
+        
+        input_depth = config.getint('DEFAULT', 'input_depth')
+        imsize_x = config.getint('DEFAULT', 'imsize_x')
+        imsize_y = config.getint('DEFAULT', 'imsize_y')
+        net_input = common.get_noise(input_depth, 'noise', (imsize_y, imsize_x)).type(state.dtype)
+
+        m = nn.Upsample(scale_factor=config.getint("DEFAULT", "factor"), mode='bicubic')
+        HR_torch_bicubic = m(LR_torch.unsqueeze(0)).squeeze(0)
+        
+        out =   {
+            'orig_torch': orig_torch,
+            #'orig_pil_blurred': orig_pil_blurred,
+            'HR_torch': HR_torch,
+            #'HR_pil_blurred': HR_pil_blurred,
+            'LR_torch': LR_torch,
+            #'LR_pil_blurred': LR_pil_blurred,
+            'net_input': net_input,
+            'HR_torch_bicubic': HR_torch_bicubic,
+            #'HR_bicubic_blurred': HR_bicubic_blurred
+        }
+        state.imgs.append(out)
 
 
 def crop(orig_torch):
