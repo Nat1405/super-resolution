@@ -113,15 +113,15 @@ def make_baseline_figure(HR, bicubic_HR, LR, name):
         up_LR_size = (up_LR.size()[0], up_LR.size()[1])
 
 
-    axes[0].imshow(torch.flip(HR, dims=(0,)), cmap='gray')
+    axes[0].imshow(torch.clamp(torch.flip(HR, dims=(0,)), 0, 1), cmap='gray')
     axes[0].set_title('HR')
     axes[0].set_xlabel('({}x{}x{})'.format(HR_size[0], HR_size[1], n_channels))
     
-    axes[1].imshow(torch.flip(bicubic_HR, dims=(0,)), cmap='gray')
+    axes[1].imshow(torch.clamp(torch.flip(bicubic_HR, dims=(0,)), 0, 1), cmap='gray')
     axes[1].set_title('HR_bicubic')
     axes[1].set_xlabel('({}x{}x{})'.format(bicubic_HR_size[0], bicubic_HR_size[1], n_channels))
     
-    axes[2].imshow(torch.flip(up_LR, dims=(0,)), cmap='gray')
+    axes[2].imshow(torch.clamp(torch.flip(up_LR, dims=(0,)), 0, 1), cmap='gray')
     axes[2].set_title('LR (NN-Upsampled)')
     axes[2].set_xlabel('({}x{}x{})'.format(up_LR_size[0], up_LR_size[1], n_channels))
 
@@ -164,25 +164,25 @@ def make_progress_figure(HR, HR_bicubic, HR_out, LR, LR_out, HR_name, LR_name):
 
     fig.suptitle('{}\n({}x{}x{})'.format(HR_name, HR_size[0], HR_size[1], n_channels), fontsize=16)
 
-    axes[0].imshow(torch.flip(HR, dims=(0,)), cmap='gray')
+    axes[0].imshow(torch.clamp(torch.flip(HR, dims=(0,)), 0, 1), cmap='gray')
     axes[0].set_title('HR')
     # Make HR output plot; include PSNR
-    axes[1].imshow(torch.flip(HR_out, dims=(0,)), cmap='gray')
+    axes[1].imshow(torch.clamp(torch.flip(HR_out, dims=(0,)), 0, 1), cmap='gray')
     axes[1].set_title('HR Output')
     psnr_HR = compare_psnr(HR.numpy(), HR_out.numpy())
     axes[1].set_xlabel('PSNR HR: {:.2f}'.format(psnr_HR))
 
-    axes[2].imshow(torch.flip(HR_bicubic, dims=(0,)), cmap='gray')
+    axes[2].imshow(torch.clamp(torch.flip(HR_bicubic, dims=(0,)), 0, 1), cmap='gray')
     axes[2].set_title('HR_bicubic')
     psnr_bicubic = compare_psnr(HR.numpy(), HR_bicubic.numpy())
     axes[2].set_xlabel('PSNR Bicubic: {:.2f}'.format(psnr_bicubic))
 
-    axes[3].imshow(torch.flip((HR_bicubic-HR), dims=(0,)), cmap='gray')
+    axes[3].imshow(torch.clamp(torch.flip((HR_bicubic-HR), dims=(0,)), 0, 1), cmap='gray')
     axes[3].set_title('Residual: \nBicubic - HR')
     bicubic_loss = compare_mse(HR.numpy(), HR_bicubic.numpy())
     axes[3].set_xlabel('MSE HR / Bicubic: {:.2e}'.format(bicubic_loss))
 
-    axes[4].imshow(torch.flip((HR_out-HR), dims=(0,)), cmap='gray')
+    axes[4].imshow(torch.clamp(torch.flip((HR_out-HR), dims=(0,)), 0, 1), cmap='gray')
     axes[4].set_title('Residual: \nHR Output - HR')
     target_loss = compare_mse(HR.numpy(), HR_out.numpy())
     axes[4].set_xlabel('MSE HR / HR Output: {:.2e}'.format(target_loss))
@@ -200,15 +200,15 @@ def make_progress_figure(HR, HR_bicubic, HR_out, LR, LR_out, HR_name, LR_name):
     fig, axes = plt.subplots(nrows, ncols, figsize=(14, 5), dpi=250)
     fig.suptitle('{}\n({}x{}x{})'.format(LR_name, LR_size[0], LR_size[1], n_channels), fontsize=16)
 
-    axes[0].imshow(torch.flip(LR, dims=(0,)), cmap='gray')
+    axes[0].imshow(torch.clamp(torch.flip(LR, dims=(0,)), 0, 1), cmap='gray')
     axes[0].set_title('LR')
     
-    axes[1].imshow(torch.flip(LR_out, dims=(0,)), cmap='gray')
+    axes[1].imshow(torch.clamp(torch.flip(LR_out, dims=(0,)), 0, 1), cmap='gray')
     axes[1].set_title('LR Output')
     psnr_LR = compare_psnr(LR.numpy(), LR_out.numpy())
     axes[1].set_xlabel('PSNR LR: {:.2f}'.format(psnr_LR))
 
-    axes[2].imshow(torch.flip((LR_out-LR), dims=(0,)), cmap='gray')
+    axes[2].imshow(torch.clamp(torch.flip((LR_out-LR), dims=(0,)), 0, 1), cmap='gray')
     axes[2].set_title('Residual: \nLR Output - LR')
     training_loss = compare_mse(LR.numpy(), LR_out.numpy())
     axes[2].set_xlabel('MSE LR / LR Output: {:.2e}'.format(training_loss))
@@ -345,7 +345,12 @@ def printMetrics():
     print("Max PSNR HR: {}".format(max(state.history['psnr_HR'])))
     print("Max PSNR LR: {}".format(max(state.history['psnr_LR'])))
     """
-    print("NOT IMPLEMENTED")
+    print("Frame  Bicubic PSNR")
+    for img, i in zip(state.imgs, range(len(state.imgs))):
+        psnr_bicubic = compare_psnr(img['HR_torch'].detach().cpu().numpy(), img['HR_torch_bicubic'].detach().cpu().numpy())
+        print("{}  {:.2f}".format(i, psnr_bicubic))
+
+
 
 
 def makeInterpolation(imgs):
@@ -404,7 +409,7 @@ def load_LR_HR_imgs_sr(fname):
     net_input = common.get_noise(input_depth, 'noise', (imsize_y, imsize_x)).type(state.dtype)
 
     # Create bicubic upsampled versions of LR images for reference
-    m = nn.Upsample(scale_factor=config.getint("DEFAULT", "factor"), mode='bicubic')
+    m = nn.Upsample(scale_factor=config.getint("DEFAULT", "factor"), mode='bicubic', align_corners=False)
     HR_torch_bicubic = m(LR_torch.unsqueeze(0)).squeeze(0)
     #HR_bicubic_blurred = LR_pil_blurred.resize(HR_pil_blurred.size, Image.BICUBIC)
 

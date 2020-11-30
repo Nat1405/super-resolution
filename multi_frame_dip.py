@@ -67,6 +67,7 @@ c = build_closure(writer, state.dtype)
 state.i = 0
 p = [x for x in state.net.parameters()]
 
+sr_utils.printMetrics()
 print("Iteration / Frame used / psnr_LR / psnr_HR")
 print(config['DEFAULT']['OPTIMIZER'])
 common.optimize(config['DEFAULT']['OPTIMIZER'], p, c, config.getfloat('DEFAULT', 'LR'), config.getint('DEFAULT', 'num_iter'))
@@ -74,4 +75,3 @@ common.optimize(config['DEFAULT']['OPTIMIZER'], p, c, config.getfloat('DEFAULT',
 
 sr_utils.save_results()
 
-#sr_utils.printMetrics()
