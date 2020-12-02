@@ -226,8 +226,17 @@ def make_summary_figure(
     psnr_LR_low, psnr_LR_high,
     target_loss_low, target_loss_high,
     training_loss_low, training_loss_high,
-    experiment_name):
-    fig, axes = plt.subplots(4, 1, sharex=True, gridspec_kw={'hspace': 0}, figsize=(7,14), dpi=250)
+    experiment_name,
+    psnr_blurred_low=None, psnr_blurred_high=None,
+    psnr_downsampled_low=None, psnr_downsampled_high=None):
+
+    if not (psnr_downsampled_high and psnr_downsampled_low):
+        nrows = 4
+        figsize = (7,14)
+    else:
+        nrows = 6
+        figsize = (7, 21)
+    fig, axes = plt.subplots(nrows, 1, sharex=True, gridspec_kw={'hspace': 0}, figsize=figsize, dpi=250)
     fig.suptitle('{}'.format(experiment_name), fontsize=16)
 
     axes[0].set_ylabel('PSNR HR_Out')
@@ -292,6 +301,39 @@ def make_summary_figure(
     axes[3].scatter(indices_high, training_loss_high)
     axes[3].plot(x_coord, y_coord, ".r") 
 
+    if psnr_downsampled_high and psnr_downsampled_low:
+        axes[4].set_ylabel('PSNR Downsampled')
+        axes[4].set_xlabel('Iterations')
+        x_coord = indices_high[np.argmax(psnr_downsampled_high)]
+        y_coord = np.max(psnr_downsampled_high)
+        offsetbox = TextArea("Iteration: {}\nLoss: {:.2f}".format(x_coord, y_coord), minimumdescent=False)
+        ab = AnnotationBbox(offsetbox, (x_coord, y_coord),
+                            xybox=(0.02, 0.92),
+                            xycoords='data',
+                            boxcoords=("axes fraction", "axes fraction"),
+                            box_alignment=(0., 0.5),
+                            arrowprops=dict(arrowstyle="->"))
+        axes[4].add_artist(ab)
+        axes[4].plot(indices_low, psnr_downsampled_low)
+        axes[4].scatter(indices_high, psnr_downsampled_high)
+        axes[4].plot(x_coord, y_coord, ".r") 
+
+        axes[5].set_ylabel('PSNR Blurred')
+        axes[5].set_xlabel('Iterations')
+        x_coord = indices_high[np.argmax(psnr_blurred_high)]
+        y_coord = np.max(psnr_blurred_high)
+        offsetbox = TextArea("Iteration: {}\nLoss: {:.2f}".format(x_coord, y_coord), minimumdescent=False)
+        ab = AnnotationBbox(offsetbox, (x_coord, y_coord),
+                            xybox=(0.02, 0.92),
+                            xycoords='data',
+                            boxcoords=("axes fraction", "axes fraction"),
+                            box_alignment=(0., 0.5),
+                            arrowprops=dict(arrowstyle="->"))
+        axes[5].add_artist(ab)
+        axes[5].plot(indices_low, psnr_blurred_low)
+        axes[5].scatter(indices_high, psnr_blurred_high)
+        axes[5].plot(x_coord, y_coord, ".r") 
+
     for ax in axes:
         ax.label_outer()
     plt.savefig('output/{}.png'.format(experiment_name))
@@ -337,7 +379,11 @@ def save_results():
             state.imgs[i]['history_low'].psnr_LR, state.imgs[i]['history_high'].psnr_LR,
             state.imgs[i]['history_low'].target_loss, state.imgs[i]['history_high'].target_loss,
             state.imgs[i]['history_low'].training_loss, state.imgs[i]['history_high'].training_loss,
-            experiment_name
+            experiment_name,
+            psnr_blurred_low=state.imgs[i]['history_low'].psnr_blurred,
+            psnr_blurred_high=state.imgs[i]['history_high'].psnr_blurred,
+            psnr_downsampled_low=state.imgs[i]['history_low'].psnr_downsampled,
+            psnr_downsampled_high=state.imgs[i]['history_high'].psnr_downsampled
         )
 
 def printMetrics():
@@ -432,13 +478,22 @@ def load_LR_HR_imgs_sr(fname):
 def preload_LR_HR(LR_path, HR_path):
     config = common.get_config()
 
+    augmented_history = config.has_option('LOADING', 'augmented_history') and \
+                        config.getboolean('LOADING', 'augmented_history')
+
+    if augmented_history:
+        blurred_path = config['LOADING']['path_to_blurred']
+        downsampled_path = config['LOADING']['path_to_downsampled']
+        HRs_blurred = sorted(glob.glob(blurred_path+"*"))
+        LRs_downsampled = sorted(glob.glob(downsampled_path+"*"))
+
     LRs = sorted(glob.glob(LR_path+"*"))
     HRs = sorted(glob.glob(HR_path+"*"))
 
-    for LR_name, HR_name in zip(LRs, HRs):
-        orig_torch = common.get_image(HR_name)
+    for i in range(len(LRs)):
+        orig_torch = common.get_image(HRs[i])
         HR_torch = orig_torch.clone()
-        LR_torch = common.get_image(LR_name)
+        LR_torch = common.get_image(LRs[i])
         
         input_depth = config.getint('DEFAULT', 'input_depth')
         imsize_x = config.getint('DEFAULT', 'imsize_x')
@@ -458,9 +513,15 @@ def preload_LR_HR(LR_path, HR_path):
             'net_input': net_input,
             'HR_torch_bicubic': HR_torch_bicubic,
             #'HR_bicubic_blurred': HR_bicubic_blurred
-            'history_low': state.HistoryTracker(),
-            'history_high': state.HistoryTracker(),
+            'history_low': state.HistoryTracker(augmented_history=augmented_history),
+            'history_high': state.HistoryTracker(augmented_history=augmented_history),
         }
+        if augmented_history:
+            HR_torch_blurred = common.get_image(HRs_blurred[i])
+            LR_torch_downsampled = common.get_image(LRs_downsampled[i])
+            out['HR_torch_blurred'] = HR_torch_blurred
+            out['LR_torch_downsampled'] = LR_torch_downsampled
+        
         state.imgs.append(out)
 
 

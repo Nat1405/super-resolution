@@ -14,9 +14,16 @@ net = None
 imgs = None
 
 class HistoryTracker:
-	def __init__(self):
+	def __init__(self, augmented_history=False):
 		self.iteration = []
 		self.psnr_HR = []
 		self.psnr_LR = []
 		self.target_loss = []
 		self.training_loss = []
+
+		if augmented_history:
+			self.psnr_blurred = []
+			self.psnr_downsampled = []
+		else:
+			self.psnr_blurred = None
+			self.psnr_downsampled = None

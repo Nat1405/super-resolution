@@ -50,6 +50,9 @@ def build_closure(writer, dtype):
     downsampler = Downsampler(n_planes=config.getint('DEFAULT', 'n_channels'), factor=4, kernel_type='lanczos2', phase=0.5, preserve_size=True).type(dtype)
 
     loss_network = None
+
+    augmented_history = config.has_option('LOADING', 'augmented_history') and \
+                        config.getboolean('LOADING', 'augmented_history')
     """
     if config.getboolean('DEFAULT', 'use_perceptual_loss'):
         vgg_model = vgg.vgg16(pretrained=True)
@@ -157,7 +160,16 @@ def build_closure(writer, dtype):
             state.imgs[index]['history_low'].target_loss.append(target_loss)
             state.imgs[index]['history_low'].training_loss.append(total_loss.item())
 
-            print("{} {} {} {}".format(state.i, index, psnr_LR, psnr_HR))
+            if augmented_history:
+                HR_torch_blurred = state.imgs[index]['HR_torch_blurred'].detach().cpu()
+                LR_torch_downsampled = state.imgs[index]['LR_torch_downsampled'].detach().cpu()
+                psnr_blurred = compare_psnr(common.torch_to_np(HR_torch_blurred), common.torch_to_np(out_HR))
+                psnr_downsampled = compare_psnr(common.torch_to_np(LR_torch_downsampled), common.torch_to_np(out_LR))
+                state.imgs[index]['history_low'].psnr_blurred.append(psnr_blurred)
+                state.imgs[index]['history_low'].psnr_downsampled.append(psnr_downsampled)
+                print("{} {} {} {} {} {}".format(state.i, index, psnr_LR, psnr_HR, psnr_blurred, psnr_downsampled))
+            else:
+                print("{} {} {} {}".format(state.i, index, psnr_LR, psnr_HR))
 
             # TensorBoard History
             writer.add_scalar('PSNR LR', psnr_LR, state.i)
@@ -175,6 +187,14 @@ def build_closure(writer, dtype):
             state.imgs[index]['history_high'].psnr_HR.append(psnr_HR)
             state.imgs[index]['history_high'].target_loss.append(target_loss)
             state.imgs[index]['history_high'].training_loss.append(total_loss.item())
+
+            if augmented_history:
+                HR_torch_blurred = state.imgs[index]['HR_torch_blurred'].detach().cpu()
+                LR_torch_downsampled = state.imgs[index]['LR_torch_downsampled'].detach().cpu()
+                psnr_blurred = compare_psnr(common.torch_to_np(HR_torch_blurred), common.torch_to_np(out_HR))
+                psnr_downsampled = compare_psnr(common.torch_to_np(LR_torch_downsampled), common.torch_to_np(out_LR))
+                state.imgs[index]['history_high'].psnr_blurred.append(psnr_blurred)
+                state.imgs[index]['history_high'].psnr_downsampled.append(psnr_downsampled)
 
             # Save parameters
             for name, param in state.net.named_parameters():
