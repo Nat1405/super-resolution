@@ -239,20 +239,22 @@ def make_summary_figure(
     fig, axes = plt.subplots(nrows, 1, sharex=True, gridspec_kw={'hspace': 0}, figsize=figsize, dpi=250)
     fig.suptitle('{}'.format(experiment_name), fontsize=16)
 
-    axes[0].set_ylabel('PSNR HR_Out')
-    x_coord = indices_high[np.argmax(psnr_HR_high)]
-    y_coord = np.max(psnr_HR_high)
-    offsetbox = TextArea("Iteration: {}\nPSNR: {:.2f}".format(x_coord, y_coord), minimumdescent=False)
-    ab = AnnotationBbox(offsetbox, (x_coord, y_coord),
-                        xybox=(0.02, 0.92),
-                        xycoords='data',
-                        boxcoords=("axes fraction", "axes fraction"),
-                        box_alignment=(0., 0.5),
-                        arrowprops=dict(arrowstyle="->"))
-    axes[0].add_artist(ab)
-    axes[0].plot(indices_low, psnr_HR_low)
-    axes[0].scatter(indices_high, psnr_HR_high)
-    axes[0].plot(x_coord, y_coord, ".r") 
+
+    if len(psnr_HR_low) > 0:
+        axes[0].set_ylabel('PSNR HR_Out')
+        x_coord = indices_high[np.argmax(psnr_HR_high)]
+        y_coord = np.max(psnr_HR_high)
+        offsetbox = TextArea("Iteration: {}\nPSNR: {:.2f}".format(x_coord, y_coord), minimumdescent=False)
+        ab = AnnotationBbox(offsetbox, (x_coord, y_coord),
+                            xybox=(0.02, 0.92),
+                            xycoords='data',
+                            boxcoords=("axes fraction", "axes fraction"),
+                            box_alignment=(0., 0.5),
+                            arrowprops=dict(arrowstyle="->"))
+        axes[0].add_artist(ab)
+        axes[0].plot(indices_low, psnr_HR_low)
+        axes[0].scatter(indices_high, psnr_HR_high)
+        axes[0].plot(x_coord, y_coord, ".r") 
 
 
     axes[1].set_ylabel('PSNR LR_Out')
@@ -270,20 +272,21 @@ def make_summary_figure(
     axes[1].scatter(indices_high, psnr_LR_high)
     axes[1].plot(x_coord, y_coord, ".r") 
 
-    axes[2].set_ylabel('Target Loss')
-    x_coord = indices_high[np.argmin(target_loss_high)]
-    y_coord = np.min(target_loss_high)
-    offsetbox = TextArea("Iteration: {}\nLoss: {:.2e}".format(x_coord, y_coord), minimumdescent=False)
-    ab = AnnotationBbox(offsetbox, (x_coord, y_coord),
-                        xybox=(0.02, 0.92),
-                        xycoords='data',
-                        boxcoords=("axes fraction", "axes fraction"),
-                        box_alignment=(0., 0.5),
-                        arrowprops=dict(arrowstyle="->"))
-    axes[2].add_artist(ab)
-    axes[2].plot(indices_low, target_loss_low)
-    axes[2].scatter(indices_high, target_loss_high)
-    axes[2].plot(x_coord, y_coord, ".r") 
+    if len(target_loss_low) > 0:
+        axes[2].set_ylabel('Target Loss')
+        x_coord = indices_high[np.argmin(target_loss_high)]
+        y_coord = np.min(target_loss_high)
+        offsetbox = TextArea("Iteration: {}\nLoss: {:.2e}".format(x_coord, y_coord), minimumdescent=False)
+        ab = AnnotationBbox(offsetbox, (x_coord, y_coord),
+                            xybox=(0.02, 0.92),
+                            xycoords='data',
+                            boxcoords=("axes fraction", "axes fraction"),
+                            box_alignment=(0., 0.5),
+                            arrowprops=dict(arrowstyle="->"))
+        axes[2].add_artist(ab)
+        axes[2].plot(indices_low, target_loss_low)
+        axes[2].scatter(indices_high, target_loss_high)
+        axes[2].plot(x_coord, y_coord, ".r") 
 
     axes[3].set_ylabel('Training Loss')
     axes[3].set_xlabel('Iterations')

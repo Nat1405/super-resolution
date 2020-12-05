@@ -67,12 +67,15 @@ c = build_closure(writer, state.dtype)
 state.i = 0
 p = [x for x in state.net.parameters()]
 
-sr_utils.printMetrics()
+#sr_utils.printMetrics()
 if config.has_option('LOADING', 'augmented_history') and \
                         config.getboolean('LOADING', 'augmented_history'):
     print("Iteration / Frame used / psnr_LR / psnr_HR / psnr_blurred / psnr_downsampled ")
-else:
+elif not (config.has_option('LOADING', 'ignore_ground_truth') and \
+                        config.getboolean('LOADING', 'ignore_ground_truth')):
     print("Iteration / Frame used / psnr_LR / psnr_HR ")
+else:
+    print("Iteration / Frame used / psnr_LR / Training Loss ")
 print(config['DEFAULT']['OPTIMIZER'])
 common.optimize(config['DEFAULT']['OPTIMIZER'], p, c, config.getfloat('DEFAULT', 'LR'), config.getint('DEFAULT', 'num_iter'))
 

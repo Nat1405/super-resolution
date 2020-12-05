@@ -53,6 +53,9 @@ def build_closure(writer, dtype):
 
     augmented_history = config.has_option('LOADING', 'augmented_history') and \
                         config.getboolean('LOADING', 'augmented_history')
+
+    ignore_ground_truth = config.has_option('LOADING', 'ignore_ground_truth') and \
+                          config.getboolean('LOADING', 'ignore_ground_truth')
     """
     if config.getboolean('DEFAULT', 'use_perceptual_loss'):
         vgg_model = vgg.vgg16(pretrained=True)
@@ -152,12 +155,16 @@ def build_closure(writer, dtype):
 
         if (state.i % plot_steps_low < len(state.imgs)):
             psnr_LR = compare_psnr(common.torch_to_np(ground_truth_LR), common.torch_to_np(out_LR))
-            psnr_HR = compare_psnr(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
-            target_loss = sr_utils.compare_HR(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
+            if not ignore_ground_truth:
+                psnr_HR = compare_psnr(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
+                target_loss = sr_utils.compare_HR(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
+                state.imgs[index]['history_low'].psnr_HR.append(psnr_HR)
+                state.imgs[index]['history_low'].target_loss.append(target_loss)
+            else:
+                psnr_HR = 0
+                target_loss = 0
             state.imgs[index]['history_low'].iteration.append(state.i)
             state.imgs[index]['history_low'].psnr_LR.append(psnr_LR)
-            state.imgs[index]['history_low'].psnr_HR.append(psnr_HR)
-            state.imgs[index]['history_low'].target_loss.append(target_loss)
             state.imgs[index]['history_low'].training_loss.append(total_loss.item())
 
             if augmented_history:
@@ -168,8 +175,10 @@ def build_closure(writer, dtype):
                 state.imgs[index]['history_low'].psnr_blurred.append(psnr_blurred)
                 state.imgs[index]['history_low'].psnr_downsampled.append(psnr_downsampled)
                 print("{} {} {} {} {} {}".format(state.i, index, psnr_LR, psnr_HR, psnr_blurred, psnr_downsampled))
-            else:
+            elif not ignore_ground_truth:
                 print("{} {} {} {}".format(state.i, index, psnr_LR, psnr_HR))
+            else:
+                print("{} {} {} {}".format(state.i, index, psnr_LR, total_loss.item()))
 
             # TensorBoard History
             writer.add_scalar('PSNR LR', psnr_LR, state.i)
@@ -180,12 +189,16 @@ def build_closure(writer, dtype):
         if (state.i % plot_steps_high < len(state.imgs)):
             # Lower frequency capturing of large data
             psnr_LR = compare_psnr(common.torch_to_np(ground_truth_LR), common.torch_to_np(out_LR))
-            psnr_HR = compare_psnr(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
-            target_loss = sr_utils.compare_HR(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
+            if not ignore_ground_truth:
+                psnr_HR = compare_psnr(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
+                target_loss = sr_utils.compare_HR(common.torch_to_np(ground_truth_HR), common.torch_to_np(out_HR))
+                state.imgs[index]['history_high'].psnr_HR.append(psnr_HR)
+                state.imgs[index]['history_high'].target_loss.append(target_loss)
+            else:
+                psnr_HR = 0
+                target_loss = 0
             state.imgs[index]['history_high'].iteration.append(state.i)
             state.imgs[index]['history_high'].psnr_LR.append(psnr_LR)
-            state.imgs[index]['history_high'].psnr_HR.append(psnr_HR)
-            state.imgs[index]['history_high'].target_loss.append(target_loss)
             state.imgs[index]['history_high'].training_loss.append(total_loss.item())
 
             if augmented_history:
