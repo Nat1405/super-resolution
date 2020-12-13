@@ -56,6 +56,11 @@ def build_closure(writer, dtype):
 
     ignore_ground_truth = config.has_option('LOADING', 'ignore_ground_truth') and \
                           config.getboolean('LOADING', 'ignore_ground_truth')
+
+    if config.has_option('DEFAULT', 'noise_level'):
+        noise_level = float(config['DEFAULT']['noise_level'])
+    else:
+        noise_level = 0.03
     """
     if config.getboolean('DEFAULT', 'use_perceptual_loss'):
         vgg_model = vgg.vgg16(pretrained=True)
@@ -131,7 +136,7 @@ def build_closure(writer, dtype):
         # Feed through actual network
         net_input_noisy = net_input.detach().clone()
         noise_t = net_input.detach().clone()
-        net_input_noisy = net_input_noisy + (noise_t.normal_() * 0.03)
+        net_input_noisy = net_input_noisy + (noise_t.normal_() * noise_level)
         out_HR = state.net(net_input_noisy)
         if noise:
             with torch.no_grad():
