@@ -9,6 +9,7 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 import torch
 import numpy as np
+import random
 
 from models.downsampler import Downsampler
 import state
@@ -56,6 +57,11 @@ def build_closure(writer, dtype):
 
     ignore_ground_truth = config.has_option('LOADING', 'ignore_ground_truth') and \
                           config.getboolean('LOADING', 'ignore_ground_truth')
+
+    random_swap = config.has_option('DEFAULT', 'random_swap') and \
+                  config.getboolean('DEFAULT', 'random_swap')
+    if random_swap:
+        random.seed(101)
 
     if config.has_option('DEFAULT', 'noise_level'):
         noise_level = float(config['DEFAULT']['noise_level'])
@@ -121,7 +127,10 @@ def build_closure(writer, dtype):
 
     def closure():
         # Train with a different input/output pair at each iteration.
-        index = state.i % len(state.imgs)
+        if random_swap:
+            index = random.randint(0, len(state.imgs)-1)
+        else:
+            index = state.i % len(state.imgs)
         net_input = state.imgs[index]['net_input']
         ground_truth_LR = state.imgs[index]['LR_torch']
         ground_truth_HR = state.imgs[index]['HR_torch']
